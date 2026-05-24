@@ -9,7 +9,7 @@ import { getMe } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/_app/ai")({
   head: () => ({ meta: [{ title: "AI Assistant — Nurtura" }] }),
-  component: AiChat;
+  component: AiChat,
 });
 
 type Msg = { role: "user" | "assistant"; content: string };
