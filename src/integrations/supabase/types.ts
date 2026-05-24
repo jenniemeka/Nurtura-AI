@@ -14,7 +14,280 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      articles: {
+        Row: {
+          body: string
+          category: string
+          cover_image_url: string | null
+          created_at: string
+          excerpt: string | null
+          id: string
+          read_minutes: number | null
+          slug: string
+          title: string
+        }
+        Insert: {
+          body: string
+          category: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          read_minutes?: number | null
+          slug: string
+          title: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          read_minutes?: number | null
+          slug?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      babies: {
+        Row: {
+          avatar_url: string | null
+          birth_date: string | null
+          created_at: string
+          id: string
+          is_pregnancy: boolean
+          name: string
+          pregnancy_due_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          created_at?: string
+          id?: string
+          is_pregnancy?: boolean
+          name: string
+          pregnancy_due_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          created_at?: string
+          id?: string
+          is_pregnancy?: boolean
+          name?: string
+          pregnancy_due_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      is_this_normal_topics: {
+        Row: {
+          created_at: string
+          id: string
+          safe_tips: string[] | null
+          slug: string
+          summary: string
+          symptoms: string[] | null
+          title: string
+          warning_signs: string[] | null
+          when_to_see_doctor: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          safe_tips?: string[] | null
+          slug: string
+          summary: string
+          symptoms?: string[] | null
+          title: string
+          warning_signs?: string[] | null
+          when_to_see_doctor?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          safe_tips?: string[] | null
+          slug?: string
+          summary?: string
+          symptoms?: string[] | null
+          title?: string
+          warning_signs?: string[] | null
+          when_to_see_doctor?: string | null
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          achieved_at: string
+          baby_id: string
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          title: string
+          unit: string | null
+          user_id: string
+          value_numeric: number | null
+        }
+        Insert: {
+          achieved_at?: string
+          baby_id: string
+          category: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          title: string
+          unit?: string | null
+          user_id: string
+          value_numeric?: number | null
+        }
+        Update: {
+          achieved_at?: string
+          baby_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          title?: string
+          unit?: string | null
+          user_id?: string
+          value_numeric?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_baby_id_fkey"
+            columns: ["baby_id"]
+            isOneToOne: false
+            referencedRelation: "babies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          read: boolean
+          scheduled_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          read?: boolean
+          scheduled_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          read?: boolean
+          scheduled_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          concerns: string[] | null
+          created_at: string
+          id: string
+          onboarded: boolean
+          parent_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          concerns?: string[] | null
+          created_at?: string
+          id: string
+          onboarded?: boolean
+          parent_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          concerns?: string[] | null
+          created_at?: string
+          id?: string
+          onboarded?: boolean
+          parent_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
