@@ -16,7 +16,12 @@ function Profile() {
   const { user } = useAuth();
   const nav = useNavigate();
   const fetchMe = useServerFn(getMe);
+  const fetchRoles = useServerFn(getMyRoles);
   const { data } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const { data: roleData } = useQuery({ queryKey: ["my-roles"], queryFn: () => fetchRoles() });
+  const roles = roleData?.roles ?? [];
+  const isExpert = roles.includes("expert");
+  const isAdmin = roles.includes("admin");
 
   async function signOut() {
     await supabase.auth.signOut();
