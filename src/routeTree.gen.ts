@@ -21,6 +21,7 @@ import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppLearnRouteImport } from './routes/_app/learn'
 import { Route as AppExpertsRouteImport } from './routes/_app/experts'
+import { Route as AppExpertPortalRouteImport } from './routes/_app/expert-portal'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCommunityRouteImport } from './routes/_app/community'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
@@ -86,6 +87,11 @@ const AppExpertsRoute = AppExpertsRouteImport.update({
   path: '/experts',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExpertPortalRoute = AppExpertPortalRouteImport.update({
+  id: '/expert-portal',
+  path: '/expert-portal',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/expert-portal': typeof AppExpertPortalRoute
   '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/expert-portal': typeof AppExpertPortalRoute
   '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/_app/ai': typeof AppAiRoute
   '/_app/community': typeof AppCommunityRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/expert-portal': typeof AppExpertPortalRoute
   '/_app/experts': typeof AppExpertsRoute
   '/_app/learn': typeof AppLearnRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/ai'
     | '/community'
     | '/dashboard'
+    | '/expert-portal'
     | '/experts'
     | '/learn'
     | '/notifications'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/ai'
     | '/community'
     | '/dashboard'
+    | '/expert-portal'
     | '/experts'
     | '/learn'
     | '/notifications'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/_app/ai'
     | '/_app/community'
     | '/_app/dashboard'
+    | '/_app/expert-portal'
     | '/_app/experts'
     | '/_app/learn'
     | '/_app/notifications'
@@ -320,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExpertsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/expert-portal': {
+      id: '/_app/expert-portal'
+      path: '/expert-portal'
+      fullPath: '/expert-portal'
+      preLoaderRoute: typeof AppExpertPortalRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -386,6 +405,7 @@ interface AppRouteChildren {
   AppAiRoute: typeof AppAiRoute
   AppCommunityRoute: typeof AppCommunityRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppExpertPortalRoute: typeof AppExpertPortalRoute
   AppExpertsRoute: typeof AppExpertsRoute
   AppLearnRoute: typeof AppLearnRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
@@ -399,6 +419,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAiRoute: AppAiRoute,
   AppCommunityRoute: AppCommunityRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppExpertPortalRoute: AppExpertPortalRoute,
   AppExpertsRoute: AppExpertsRoute,
   AppLearnRoute: AppLearnRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
