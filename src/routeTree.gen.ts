@@ -25,6 +25,7 @@ import { Route as AppExpertPortalRouteImport } from './routes/_app/expert-portal
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCommunityRouteImport } from './routes/_app/community'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
+import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppLearnSlugRouteImport } from './routes/_app/learn.$slug'
 import { Route as AppCommunitySlugRouteImport } from './routes/_app/community.$slug'
 
@@ -107,6 +108,11 @@ const AppAiRoute = AppAiRouteImport.update({
   path: '/ai',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLearnSlugRoute = AppLearnSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AppAdminRoute
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AppAdminRoute
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/ai': typeof AppAiRoute
   '/_app/community': typeof AppCommunityRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/admin'
     | '/ai'
     | '/community'
     | '/dashboard'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/admin'
     | '/ai'
     | '/community'
     | '/dashboard'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/_app/admin'
     | '/_app/ai'
     | '/_app/community'
     | '/_app/dashboard'
@@ -360,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAiRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/learn/$slug': {
       id: '/_app/learn/$slug'
       path: '/$slug'
@@ -402,6 +421,7 @@ const AppLearnRouteWithChildren = AppLearnRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppAiRoute: typeof AppAiRoute
   AppCommunityRoute: typeof AppCommunityRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
@@ -416,6 +436,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppAiRoute: AppAiRoute,
   AppCommunityRoute: AppCommunityRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
