@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
@@ -11,7 +11,24 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
 });
 
-const CONCERNS = ["Sleep", "Feeding", "Crying", "Development", "Postpartum", "Mental load"];
+const CONCERNS = ["Sleep", "Feeding", "Crying", "Development", "Postpartum", "Mental load", "Health", "Routine"];
+
+const AGE_BUCKETS = [
+  { id: "0-2m", label: "0–2 mo", months: 1 },
+  { id: "3-5m", label: "3–5 mo", months: 4 },
+  { id: "6-8m", label: "6–8 mo", months: 7 },
+  { id: "9-11m", label: "9–11 mo", months: 10 },
+  { id: "12-17m", label: "12–17 mo", months: 14 },
+  { id: "18-24m", label: "18–24 mo", months: 21 },
+  { id: "2-3y", label: "2–3 yr", months: 30 },
+  { id: "3y+", label: "3 yr +", months: 42 },
+] as const;
+
+function monthsAgoToDate(months: number) {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
 
 function Onboarding() {
   const { user, loading } = useAuth();
@@ -22,13 +39,25 @@ function Onboarding() {
   const [parentName, setParentName] = useState("");
   const [stage, setStage] = useState<"pregnant" | "newborn">("newborn");
   const [babyName, setBabyName] = useState("");
+  const [ageBucket, setAgeBucket] = useState<string>("");
   const [date, setDate] = useState("");
   const [concerns, setConcerns] = useState<string[]>([]);
+  const [supportLevel, setSupportLevel] = useState(3);
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/login" });
   }, [loading, user, nav]);
+
+  const effectiveDate = useMemo(() => {
+    if (date) return date;
+    if (stage === "newborn" && ageBucket) {
+      const b = AGE_BUCKETS.find((x) => x.id === ageBucket);
+      if (b) return monthsAgoToDate(b.months);
+    }
+    return "";
+  }, [date, ageBucket, stage]);
 
   function toggleConcern(c: string) {
     setConcerns((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
@@ -42,11 +71,13 @@ function Onboarding() {
         data: {
           parentName,
           concerns,
+          concernsNotes: notes.trim() || undefined,
+          supportLevel,
           baby: {
             name: babyName,
             isPregnancy: stage === "pregnant",
-            birthDate: stage === "newborn" ? date || undefined : undefined,
-            pregnancyDueDate: stage === "pregnant" ? date || undefined : undefined,
+            birthDate: stage === "newborn" ? effectiveDate || undefined : undefined,
+            pregnancyDueDate: stage === "pregnant" ? effectiveDate || undefined : undefined,
           },
         },
       });
@@ -75,10 +106,32 @@ function Onboarding() {
             ))}
           </div>
           <Input placeholder={stage === "pregnant" ? "Baby's name (or nickname)" : "Baby's name"} value={babyName} onChange={(e) => setBabyName(e.target.value)} maxLength={60} />
-          <div>
-            <label className="text-xs text-ink/60 mb-1 block">{stage === "pregnant" ? "Due date" : "Birth date"}</label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
+
+          {stage === "newborn" ? (
+            <div className="space-y-2">
+              <label className="text-xs text-ink/60 block">Age range</label>
+              <div className="flex flex-wrap gap-2">
+                {AGE_BUCKETS.map((b) => (
+                  <button key={b.id} type="button" onClick={() => { setAgeBucket(b.id); setDate(""); }}
+                    className={`rounded-full px-3 py-1.5 text-xs ring-1 ${ageBucket === b.id ? "bg-ink text-cream ring-ink" : "bg-card text-ink ring-zinc-950/10"}`}>
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+              <details className="pt-1">
+                <summary className="text-xs text-ink/50 cursor-pointer">Know the exact birth date?</summary>
+                <div className="mt-2">
+                  <Input type="date" value={date} onChange={(e) => { setDate(e.target.value); setAgeBucket(""); }} />
+                </div>
+              </details>
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs text-ink/60 mb-1 block">Due date</label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button onClick={() => setStep(0)} className="flex-1 rounded-full bg-card px-5 py-3 text-sm font-medium ring-1 ring-zinc-950/10">Back</button>
             <button onClick={() => setStep(2)} disabled={!babyName.trim()} className="flex-1 rounded-full bg-ink px-5 py-3 text-sm font-medium text-cream disabled:opacity-50">Continue</button>
@@ -87,14 +140,44 @@ function Onboarding() {
       )}
       {step === 2 && (
         <div className="space-y-4">
-          <p className="text-sm text-ink/60">What's most on your mind right now?</p>
-          <div className="flex flex-wrap gap-2">
-            {CONCERNS.map((c) => (
-              <button key={c} onClick={() => toggleConcern(c)} className={`rounded-full px-4 py-2 text-sm ring-1 ${concerns.includes(c) ? "bg-ink text-cream ring-ink" : "bg-card text-ink ring-zinc-950/10"}`}>
-                {c}
-              </button>
-            ))}
+          <div>
+            <p className="text-sm text-ink/60">What's most on your mind right now?</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CONCERNS.map((c) => (
+                <button key={c} onClick={() => toggleConcern(c)} className={`rounded-full px-4 py-2 text-sm ring-1 ${concerns.includes(c) ? "bg-ink text-cream ring-ink" : "bg-card text-ink ring-zinc-950/10"}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-ink/60">How supported do you feel?</label>
+              <span className="text-xs text-ink/50">{["Overwhelmed", "Struggling", "Coping", "Steady", "Confident"][supportLevel - 1]}</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              value={supportLevel}
+              onChange={(e) => setSupportLevel(Number(e.target.value))}
+              className="mt-2 w-full accent-ink"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-ink/60 mb-1 block">Anything else you'd like Nurtura to know? (optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. We're navigating reflux and short naps."
+              rows={3}
+              maxLength={500}
+              className="w-full rounded-2xl bg-card px-4 py-3 text-sm ring-1 ring-zinc-950/10 outline-none"
+            />
+          </div>
+
           <div className="flex gap-2 pt-2">
             <button onClick={() => setStep(1)} className="flex-1 rounded-full bg-card px-5 py-3 text-sm font-medium ring-1 ring-zinc-950/10">Back</button>
             <button onClick={finish} disabled={submitting} className="flex-1 rounded-full bg-ink px-5 py-3 text-sm font-medium text-cream disabled:opacity-50">
