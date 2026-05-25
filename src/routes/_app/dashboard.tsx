@@ -44,6 +44,14 @@ function Dashboard() {
         <p className="mt-2 text-base text-pretty">You're doing better than you think. Tiny moments of presence are exactly what your baby needs today.</p>
       </div>
 
+      {baby?.is_pregnancy && (
+        <Link to="/pregnancy" className="block rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
+          <p className="text-xs uppercase tracking-[0.15em] text-ink/50">Pregnancy Mode</p>
+          <p className="mt-2 font-medium">Open your pregnancy hub</p>
+          <p className="text-xs text-ink/60 mt-1">Weekly progress, reminders, kick counter, contraction timer, hospital bag &amp; birth plan.</p>
+        </Link>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <Link to="/ai" className="rounded-2xl bg-card p-5 ring-1 ring-zinc-950/5 hover:shadow-sm transition-shadow">
           <Sparkles className="size-5 text-ink/70" />
@@ -56,6 +64,7 @@ function Dashboard() {
           <p className="text-xs text-ink/50 mt-1">Track growth and progress.</p>
         </Link>
       </div>
+
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Reminders</h2>

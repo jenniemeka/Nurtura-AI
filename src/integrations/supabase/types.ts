@@ -73,6 +73,45 @@ export type Database = {
           },
         ]
       }
+      antenatal_appointments: {
+        Row: {
+          created_at: string
+          done: boolean
+          id: string
+          kind: string
+          notes: string | null
+          reminder_minutes: number | null
+          scheduled_at: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          kind?: string
+          notes?: string | null
+          reminder_minutes?: number | null
+          scheduled_at: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          kind?: string
+          notes?: string | null
+          reminder_minutes?: number | null
+          scheduled_at?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       articles: {
         Row: {
           author_id: string | null
@@ -146,6 +185,30 @@ export type Database = {
           is_pregnancy?: boolean
           name?: string
           pregnancy_due_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      birth_plans: {
+        Row: {
+          created_at: string
+          id: string
+          preferences: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          preferences?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          preferences?: Json
           updated_at?: string
           user_id?: string
         }
@@ -338,6 +401,33 @@ export type Database = {
           },
         ]
       }
+      hospital_bag_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          label: string
+          packed: boolean
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          label: string
+          packed?: boolean
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          packed?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       is_this_normal_topics: {
         Row: {
           created_at: string
@@ -523,6 +613,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pregnancy_logs: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          kind: string
+          logged_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          kind: string
+          logged_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          kind?: string
+          logged_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

@@ -18,6 +18,7 @@ import { Route as AppTrackerRouteImport } from './routes/_app/tracker'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppReelsRouteImport } from './routes/_app/reels'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppPregnancyRouteImport } from './routes/_app/pregnancy'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppLearnRouteImport } from './routes/_app/learn'
 import { Route as AppExpertsRouteImport } from './routes/_app/experts'
@@ -71,6 +72,11 @@ const AppReelsRoute = AppReelsRouteImport.update({
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPregnancyRoute = AppPregnancyRouteImport.update({
+  id: '/pregnancy',
+  path: '/pregnancy',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
+  '/pregnancy': typeof AppPregnancyRoute
   '/profile': typeof AppProfileRoute
   '/reels': typeof AppReelsRoute
   '/search': typeof AppSearchRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
+  '/pregnancy': typeof AppPregnancyRoute
   '/profile': typeof AppProfileRoute
   '/reels': typeof AppReelsRoute
   '/search': typeof AppSearchRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/_app/experts': typeof AppExpertsRoute
   '/_app/learn': typeof AppLearnRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/pregnancy': typeof AppPregnancyRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/reels': typeof AppReelsRoute
   '/_app/search': typeof AppSearchRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/experts'
     | '/learn'
     | '/notifications'
+    | '/pregnancy'
     | '/profile'
     | '/reels'
     | '/search'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/experts'
     | '/learn'
     | '/notifications'
+    | '/pregnancy'
     | '/profile'
     | '/reels'
     | '/search'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/_app/experts'
     | '/_app/learn'
     | '/_app/notifications'
+    | '/_app/pregnancy'
     | '/_app/profile'
     | '/_app/reels'
     | '/_app/search'
@@ -321,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pregnancy': {
+      id: '/_app/pregnancy'
+      path: '/pregnancy'
+      fullPath: '/pregnancy'
+      preLoaderRoute: typeof AppPregnancyRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/notifications': {
@@ -429,6 +448,7 @@ interface AppRouteChildren {
   AppExpertsRoute: typeof AppExpertsRoute
   AppLearnRoute: typeof AppLearnRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
+  AppPregnancyRoute: typeof AppPregnancyRoute
   AppProfileRoute: typeof AppProfileRoute
   AppReelsRoute: typeof AppReelsRoute
   AppSearchRoute: typeof AppSearchRoute
@@ -444,6 +464,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppExpertsRoute: AppExpertsRoute,
   AppLearnRoute: AppLearnRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
+  AppPregnancyRoute: AppPregnancyRoute,
   AppProfileRoute: AppProfileRoute,
   AppReelsRoute: AppReelsRoute,
   AppSearchRoute: AppSearchRoute,
