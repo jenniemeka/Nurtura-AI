@@ -15,11 +15,16 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppTrackerRouteImport } from './routes/_app/tracker'
+import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as AppReelsRouteImport } from './routes/_app/reels'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppLearnRouteImport } from './routes/_app/learn'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppCommunityRouteImport } from './routes/_app/community'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
 import { Route as AppLearnSlugRouteImport } from './routes/_app/learn.$slug'
+import { Route as AppCommunitySlugRouteImport } from './routes/_app/community.$slug'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -50,9 +55,24 @@ const AppTrackerRoute = AppTrackerRouteImport.update({
   path: '/tracker',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSearchRoute = AppSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReelsRoute = AppReelsRouteImport.update({
+  id: '/reels',
+  path: '/reels',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLearnRoute = AppLearnRouteImport.update({
@@ -65,6 +85,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCommunityRoute = AppCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAiRoute = AppAiRouteImport.update({
   id: '/ai',
   path: '/ai',
@@ -75,6 +100,11 @@ const AppLearnSlugRoute = AppLearnSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => AppLearnRoute,
 } as any)
+const AppCommunitySlugRoute = AppCommunitySlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AppCommunityRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,10 +112,15 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/ai': typeof AppAiRoute
+  '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/learn': typeof AppLearnRouteWithChildren
+  '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
+  '/reels': typeof AppReelsRoute
+  '/search': typeof AppSearchRoute
   '/tracker': typeof AppTrackerRoute
+  '/community/$slug': typeof AppCommunitySlugRoute
   '/learn/$slug': typeof AppLearnSlugRoute
 }
 export interface FileRoutesByTo {
@@ -94,10 +129,15 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/ai': typeof AppAiRoute
+  '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/learn': typeof AppLearnRouteWithChildren
+  '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
+  '/reels': typeof AppReelsRoute
+  '/search': typeof AppSearchRoute
   '/tracker': typeof AppTrackerRoute
+  '/community/$slug': typeof AppCommunitySlugRoute
   '/learn/$slug': typeof AppLearnSlugRoute
 }
 export interface FileRoutesById {
@@ -108,10 +148,15 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/_app/ai': typeof AppAiRoute
+  '/_app/community': typeof AppCommunityRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/learn': typeof AppLearnRouteWithChildren
+  '/_app/notifications': typeof AppNotificationsRoute
   '/_app/profile': typeof AppProfileRoute
+  '/_app/reels': typeof AppReelsRoute
+  '/_app/search': typeof AppSearchRoute
   '/_app/tracker': typeof AppTrackerRoute
+  '/_app/community/$slug': typeof AppCommunitySlugRoute
   '/_app/learn/$slug': typeof AppLearnSlugRoute
 }
 export interface FileRouteTypes {
@@ -122,10 +167,15 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/ai'
+    | '/community'
     | '/dashboard'
     | '/learn'
+    | '/notifications'
     | '/profile'
+    | '/reels'
+    | '/search'
     | '/tracker'
+    | '/community/$slug'
     | '/learn/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -134,10 +184,15 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/ai'
+    | '/community'
     | '/dashboard'
     | '/learn'
+    | '/notifications'
     | '/profile'
+    | '/reels'
+    | '/search'
     | '/tracker'
+    | '/community/$slug'
     | '/learn/$slug'
   id:
     | '__root__'
@@ -147,10 +202,15 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/_app/ai'
+    | '/_app/community'
     | '/_app/dashboard'
     | '/_app/learn'
+    | '/_app/notifications'
     | '/_app/profile'
+    | '/_app/reels'
+    | '/_app/search'
     | '/_app/tracker'
+    | '/_app/community/$slug'
     | '/_app/learn/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -206,11 +266,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTrackerRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/search': {
+      id: '/_app/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AppSearchRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reels': {
+      id: '/_app/reels'
+      path: '/reels'
+      fullPath: '/reels'
+      preLoaderRoute: typeof AppReelsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/profile': {
       id: '/_app/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notifications': {
+      id: '/_app/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/learn': {
@@ -227,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/community': {
+      id: '/_app/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof AppCommunityRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/ai': {
       id: '/_app/ai'
       path: '/ai'
@@ -241,8 +329,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLearnSlugRouteImport
       parentRoute: typeof AppLearnRoute
     }
+    '/_app/community/$slug': {
+      id: '/_app/community/$slug'
+      path: '/$slug'
+      fullPath: '/community/$slug'
+      preLoaderRoute: typeof AppCommunitySlugRouteImport
+      parentRoute: typeof AppCommunityRoute
+    }
   }
 }
+
+interface AppCommunityRouteChildren {
+  AppCommunitySlugRoute: typeof AppCommunitySlugRoute
+}
+
+const AppCommunityRouteChildren: AppCommunityRouteChildren = {
+  AppCommunitySlugRoute: AppCommunitySlugRoute,
+}
+
+const AppCommunityRouteWithChildren = AppCommunityRoute._addFileChildren(
+  AppCommunityRouteChildren,
+)
 
 interface AppLearnRouteChildren {
   AppLearnSlugRoute: typeof AppLearnSlugRoute
@@ -258,17 +365,25 @@ const AppLearnRouteWithChildren = AppLearnRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAiRoute: typeof AppAiRoute
+  AppCommunityRoute: typeof AppCommunityRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppLearnRoute: typeof AppLearnRouteWithChildren
+  AppNotificationsRoute: typeof AppNotificationsRoute
   AppProfileRoute: typeof AppProfileRoute
+  AppReelsRoute: typeof AppReelsRoute
+  AppSearchRoute: typeof AppSearchRoute
   AppTrackerRoute: typeof AppTrackerRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAiRoute: AppAiRoute,
+  AppCommunityRoute: AppCommunityRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppLearnRoute: AppLearnRouteWithChildren,
+  AppNotificationsRoute: AppNotificationsRoute,
   AppProfileRoute: AppProfileRoute,
+  AppReelsRoute: AppReelsRoute,
+  AppSearchRoute: AppSearchRoute,
   AppTrackerRoute: AppTrackerRoute,
 }
 
@@ -284,13 +399,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Home, MessageCircle, ListChecks, BookOpen, User } from "lucide-react";
+import { Home, MessageCircle, BookOpen, User, Bell, Search, PlaySquare, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_app")({
@@ -9,10 +9,10 @@ export const Route = createFileRoute("/_app")({
 
 const TABS = [
   { to: "/dashboard", label: "Home", icon: Home },
-  { to: "/tracker", label: "Tracker", icon: ListChecks },
+  { to: "/reels", label: "Reels", icon: PlaySquare },
   { to: "/ai", label: "AI", icon: MessageCircle },
-  { to: "/learn", label: "Learn", icon: BookOpen },
-  { to: "/profile", label: "Profile", icon: User },
+  { to: "/community", label: "Groups", icon: Users },
+  { to: "/profile", label: "You", icon: User },
 ] as const;
 
 function AppLayout() {
@@ -32,9 +32,17 @@ function AppLayout() {
       <header className="sticky top-0 z-40 bg-cream/85 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-5">
           <Link to="/dashboard" className="text-base font-semibold tracking-tight">Nurtura</Link>
-          <Link to="/profile" className="rounded-full bg-lavender size-8 grid place-items-center text-xs font-medium">
-            {(user.email ?? "?").charAt(0).toUpperCase()}
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link to="/search" className="size-9 grid place-items-center rounded-full hover:bg-white/60">
+              <Search className="size-4 text-ink/70" />
+            </Link>
+            <Link to="/notifications" className="size-9 grid place-items-center rounded-full hover:bg-white/60">
+              <Bell className="size-4 text-ink/70" />
+            </Link>
+            <Link to="/learn" className="size-9 grid place-items-center rounded-full hover:bg-white/60">
+              <BookOpen className="size-4 text-ink/70" />
+            </Link>
+          </div>
         </div>
         <div className="h-px w-full bg-zinc-950/5" />
       </header>
