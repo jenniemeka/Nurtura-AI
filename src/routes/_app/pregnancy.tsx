@@ -3,8 +3,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 import {
-  Activity, Baby, BellRing, BookOpen, CalendarPlus, ClipboardList, Droplet,
+  Activity, Baby, BellRing, BookOpen, CalendarPlus, ClipboardList, Download, Droplet,
   Footprints, Heart, ListChecks, Moon, Plus, Scale, Smile, Stethoscope, Timer, Trash2,
 } from "lucide-react";
 import { getMe } from "@/lib/profile.functions";
@@ -40,6 +41,35 @@ function fruitFor(week: number) {
   let pick = keys[0];
   for (const k of keys) if (k <= week) pick = k;
   return FRUIT_SIZE[pick];
+}
+
+/* Per-week milestones + growth insights */
+const WEEK_INFO: Record<number, { milestone: string; insight: string; length?: string; weight?: string }> = {
+  4: { milestone: "Implantation complete", insight: "Neural tube and heart begin forming.", length: "2 mm" },
+  6: { milestone: "Heartbeat detectable", insight: "Tiny buds for arms and legs appear.", length: "5 mm" },
+  8: { milestone: "All major organs forming", insight: "Fingers and toes start to separate.", length: "1.6 cm" },
+  10: { milestone: "Vital organs functioning", insight: "Baby moves but you can't feel it yet.", length: "3 cm", weight: "4 g" },
+  12: { milestone: "End of first trimester", insight: "Reflexes develop; miscarriage risk drops sharply.", length: "5 cm", weight: "14 g" },
+  14: { milestone: "Facial expressions begin", insight: "Baby can squint, frown, and grimace.", length: "8 cm", weight: "40 g" },
+  16: { milestone: "Sex may be visible on ultrasound", insight: "Tiny bones hardening; eyes can move.", length: "12 cm", weight: "100 g" },
+  18: { milestone: "Hearing develops", insight: "Baby can hear your voice and heartbeat.", length: "14 cm", weight: "190 g" },
+  20: { milestone: "Halfway there — anatomy scan", insight: "You may start feeling first kicks.", length: "25 cm", weight: "300 g" },
+  22: { milestone: "Eyebrows and lashes form", insight: "Baby develops a sleep–wake rhythm.", length: "28 cm", weight: "430 g" },
+  24: { milestone: "Viability milestone", insight: "Lungs make surfactant; taste buds form.", length: "30 cm", weight: "600 g" },
+  26: { milestone: "Eyes open", insight: "Baby responds to sound and light.", length: "35 cm", weight: "760 g" },
+  28: { milestone: "Third trimester begins", insight: "Start daily kick counts; brain growth accelerates.", length: "38 cm", weight: "1 kg" },
+  30: { milestone: "Bone marrow makes blood cells", insight: "Baby's grip strengthens; eyesight sharpens.", length: "40 cm", weight: "1.3 kg" },
+  32: { milestone: "Practicing breathing", insight: "Skin smoothing; fingernails reach fingertips.", length: "42 cm", weight: "1.7 kg" },
+  34: { milestone: "Central nervous system maturing", insight: "Most babies turn head-down this month.", length: "45 cm", weight: "2.1 kg" },
+  36: { milestone: "Early term soon", insight: "Lungs nearly mature; gaining ~225 g per week.", length: "47 cm", weight: "2.6 kg" },
+  38: { milestone: "Full term", insight: "Vernix shedding; baby ready any day now.", length: "49 cm", weight: "3 kg" },
+  40: { milestone: "Due date", insight: "Watch for contractions, water breaking, or bloody show.", length: "50 cm", weight: "3.4 kg" },
+};
+function weekInfoFor(week: number) {
+  const keys = Object.keys(WEEK_INFO).map(Number).sort((a, b) => a - b);
+  let pick = keys[0];
+  for (const k of keys) if (k <= week) pick = k;
+  return WEEK_INFO[pick];
 }
 
 function PregnancyHub() {
@@ -105,6 +135,7 @@ function PregnancyHub() {
 function Overview({ week, trimester }: { week: number | null; trimester: number | null }) {
   const pct = week ? Math.min(100, Math.round((week / 40) * 100)) : 0;
   const fruit = week ? fruitFor(week) : null;
+  const info = week ? weekInfoFor(week) : null;
   return (
     <div className="space-y-4">
       <section className="rounded-3xl bg-lavender/60 p-5 ring-1 ring-zinc-950/5">
@@ -117,6 +148,30 @@ function Overview({ week, trimester }: { week: number | null; trimester: number 
         </div>
         <p className="mt-1 text-[10px] tracking-wider text-ink/40">{pct}% of 40 weeks</p>
       </section>
+
+      {info && (
+        <section className="rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
+          <p className="text-xs uppercase tracking-[0.15em] text-ink/40">This week's milestone</p>
+          <p className="mt-2 text-base font-medium">{info.milestone}</p>
+          <p className="mt-1 text-sm text-ink/70">{info.insight}</p>
+          {(info.length || info.weight) && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {info.length && (
+                <div className="rounded-2xl bg-cream p-3 ring-1 ring-zinc-950/10">
+                  <p className="text-[10px] uppercase tracking-wider text-ink/50">Length</p>
+                  <p className="mt-0.5 text-sm font-semibold">{info.length}</p>
+                </div>
+              )}
+              {info.weight && (
+                <div className="rounded-2xl bg-cream p-3 ring-1 ring-zinc-950/10">
+                  <p className="text-[10px] uppercase tracking-wider text-ink/50">Weight</p>
+                  <p className="mt-0.5 text-sm font-semibold">{info.weight}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="grid grid-cols-2 gap-3">
         <Link to="/ai" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
@@ -373,8 +428,29 @@ function Tools() {
   );
 }
 
+function RecentSessions({ kind, title, render }: { kind: "kick_session" | "contraction_session"; title: string; render: (d: any) => string }) {
+  const list = useServerFn(listPregnancyLogs);
+  const { data } = useQuery({ queryKey: ["preg-logs", kind], queryFn: () => list({ data: { kind, limit: 5 } }) });
+  const logs = data?.logs ?? [];
+  if (!logs.length) return null;
+  return (
+    <section className="mt-4">
+      <p className="text-xs uppercase tracking-[0.15em] text-ink/40 mb-2">{title}</p>
+      <ul className="space-y-2">
+        {logs.map((l: any) => (
+          <li key={l.id} className="rounded-2xl bg-card p-3 ring-1 ring-zinc-950/5 flex items-center justify-between">
+            <p className="text-sm">{render(l.data || {})}</p>
+            <p className="text-[10px] text-ink/40">{new Date(l.logged_at).toLocaleString()}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function KickCounter() {
   const add = useServerFn(addPregnancyLog);
+  const qc = useQueryClient();
   const [count, setCount] = useState(0);
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -396,6 +472,8 @@ function KickCounter() {
     if (count > 0) {
       try {
         await add({ data: { kind: "kick_session", data: { count, durationMs: ms } } });
+        qc.invalidateQueries({ queryKey: ["preg-logs", "kick_session"] });
+        qc.invalidateQueries({ queryKey: ["preg-logs"] });
         toast.success(`Logged ${count} kicks`);
       } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     }
@@ -406,27 +484,32 @@ function KickCounter() {
   const secs = Math.floor((elapsed % 60000) / 1000);
 
   return (
-    <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 text-center space-y-4">
-      <Baby className="size-6 mx-auto text-ink/60" />
-      <p className="text-xs text-ink/60">Tap each time you feel a kick. Aim for 10 kicks within 2 hours.</p>
-      <button onClick={tap} disabled={!running}
-        className="mx-auto block size-40 rounded-full bg-lavender/70 text-4xl font-semibold ring-1 ring-zinc-950/10 disabled:opacity-50">
-        {count}
-      </button>
-      <p className="text-sm tabular-nums text-ink/60">{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}</p>
-      <div className="flex gap-2 justify-center">
-        {!running ? (
-          <button onClick={start} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Start session</button>
-        ) : (
-          <button onClick={stop} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Stop & save</button>
-        )}
+    <div>
+      <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 text-center space-y-4">
+        <Baby className="size-6 mx-auto text-ink/60" />
+        <p className="text-xs text-ink/60">Tap each time you feel a kick. Aim for 10 kicks within 2 hours.</p>
+        <button onClick={tap} disabled={!running}
+          className="mx-auto block size-40 rounded-full bg-lavender/70 text-4xl font-semibold ring-1 ring-zinc-950/10 disabled:opacity-50">
+          {count}
+        </button>
+        <p className="text-sm tabular-nums text-ink/60">{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}</p>
+        <div className="flex gap-2 justify-center">
+          {!running ? (
+            <button onClick={start} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Start session</button>
+          ) : (
+            <button onClick={stop} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Stop & save</button>
+          )}
+        </div>
       </div>
+      <RecentSessions kind="kick_session" title="Recent kick sessions"
+        render={(d) => `${d.count ?? 0} kicks in ${Math.round((d.durationMs ?? 0) / 60000)} min`} />
     </div>
   );
 }
 
 function ContractionTimer() {
   const add = useServerFn(addPregnancyLog);
+  const qc = useQueryClient();
   const [contractions, setContractions] = useState<{ start: number; end?: number }[]>([]);
   const [active, setActive] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -456,33 +539,41 @@ function ContractionTimer() {
     if (!finished.length) return;
     try {
       await add({ data: { kind: "contraction_session", data: { contractions: finished, avgInterval, avgDur } } });
+      qc.invalidateQueries({ queryKey: ["preg-logs", "contraction_session"] });
+      qc.invalidateQueries({ queryKey: ["preg-logs"] });
       toast.success("Session saved");
       setContractions([]);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
   return (
-    <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 space-y-4">
-      <p className="text-xs text-ink/60 text-center">Tap to start a contraction, tap again when it ends.</p>
-      <button onClick={toggle}
-        className={`mx-auto block size-32 rounded-full text-lg font-medium ring-1 ring-zinc-950/10 ${active ? "bg-rose-100 text-rose-900" : "bg-lavender/70"}`}>
-        {active ? `${current}s` : "Tap"}
-      </button>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <Stat label="Count" value={finished.length} />
-        <Stat label="Avg length" value={`${avgDur}s`} />
-        <Stat label="Avg interval" value={`${avgInterval}s`} />
+    <div>
+      <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 space-y-4">
+        <p className="text-xs text-ink/60 text-center">Tap to start a contraction, tap again when it ends.</p>
+        <button onClick={toggle}
+          className={`mx-auto block size-32 rounded-full text-lg font-medium ring-1 ring-zinc-950/10 ${active ? "bg-rose-100 text-rose-900" : "bg-lavender/70"}`}>
+          {active ? `${current}s` : "Tap"}
+        </button>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <Stat label="Count" value={finished.length} />
+          <Stat label="Avg length" value={`${avgDur}s`} />
+          <Stat label="Avg interval" value={`${avgInterval}s`} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setContractions([])} className="flex-1 rounded-full bg-cream px-4 py-2 text-sm ring-1 ring-zinc-950/10">Clear</button>
+          <button onClick={save} disabled={!finished.length} className="flex-1 rounded-full bg-ink px-4 py-2 text-sm text-cream disabled:opacity-40">Save</button>
+        </div>
+        <p className="text-[11px] text-ink/50 text-center">
+          Contractions ~5 min apart, ~1 min long, for an hour → call your provider.
+        </p>
       </div>
-      <div className="flex gap-2">
-        <button onClick={() => setContractions([])} className="flex-1 rounded-full bg-cream px-4 py-2 text-sm ring-1 ring-zinc-950/10">Clear</button>
-        <button onClick={save} disabled={!finished.length} className="flex-1 rounded-full bg-ink px-4 py-2 text-sm text-cream disabled:opacity-40">Save</button>
-      </div>
-      <p className="text-[11px] text-ink/50 text-center">
-        Contractions ~5 min apart, ~1 min long, for an hour → call your provider.
-      </p>
+      <RecentSessions kind="contraction_session" title="Recent contraction sessions"
+        render={(d) => `${d.contractions?.length ?? 0} contractions · avg ${d.avgDur ?? 0}s, every ${d.avgInterval ?? 0}s`} />
     </div>
   );
 }
+
+
 
 function Stat({ label, value }: { label: string; value: any }) {
   return (
@@ -565,8 +656,10 @@ const BIRTH_QS: { key: string; q: string; options: string[] }[] = [
 function BirthPlanPanel() {
   const get = useServerFn(getBirthPlan);
   const save = useServerFn(saveBirthPlan);
+  const fetchMe = useServerFn(getMe);
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["birth-plan"], queryFn: () => get() });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
   const [prefs, setPrefs] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
 
@@ -585,6 +678,68 @@ function BirthPlanPanel() {
       toast.success("Birth plan saved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
+
+  function exportPDF() {
+    const answered = BIRTH_QS.filter((q) => prefs[q.key]);
+    if (!answered.length && !notes.trim()) {
+      toast.error("Make a few selections first");
+      return;
+    }
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+    const margin = 56;
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    let y = margin;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("Birth Plan", margin, y);
+    y += 26;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(110);
+    const parentName = me?.profile?.parent_name ?? "";
+    const meta = [
+      parentName && `Parent: ${parentName}`,
+      me?.babies?.[0]?.pregnancy_due_date && `Due date: ${new Date(me.babies[0].pregnancy_due_date).toLocaleDateString()}`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+    ].filter(Boolean).join("   ·   ");
+    doc.text(meta, margin, y);
+    y += 24;
+    doc.setTextColor(0);
+
+    const writeLine = (label: string, value: string) => {
+      if (y > pageH - margin - 40) { doc.addPage(); y = margin; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(label, margin, y);
+      y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      const lines = doc.splitTextToSize(value, pageW - margin * 2);
+      doc.text(lines, margin, y);
+      y += lines.length * 16 + 10;
+    };
+
+    for (const q of BIRTH_QS) {
+      writeLine(q.q, prefs[q.key] || "—");
+    }
+    if (notes.trim()) writeLine("Additional wishes", notes.trim());
+
+    if (y > pageH - margin - 40) { doc.addPage(); y = margin; }
+    doc.setFontSize(9);
+    doc.setTextColor(140);
+    doc.text(
+      "This birth plan reflects preferences and is not a medical directive. Discuss with your provider.",
+      margin, pageH - margin / 2,
+    );
+
+    doc.save(`birth-plan-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success("PDF downloaded");
+  }
+
+  const answeredCount = BIRTH_QS.filter((q) => prefs[q.key]).length;
 
   return (
     <div className="space-y-3">
@@ -607,7 +762,33 @@ function BirthPlanPanel() {
           placeholder="Special wishes, cultural practices, things to avoid…"
           className="mt-2 w-full rounded-2xl bg-cream px-3 py-2 text-sm ring-1 ring-zinc-950/10 outline-none" />
       </section>
-      <button onClick={persist} className="w-full rounded-full bg-ink px-5 py-3 text-sm text-cream">Save birth plan</button>
+
+      {(answeredCount > 0 || notes.trim()) && (
+        <section className="rounded-2xl bg-lavender/60 p-4 ring-1 ring-zinc-950/5">
+          <p className="text-xs uppercase tracking-[0.15em] text-ink/50 mb-2">Review</p>
+          <dl className="space-y-1.5 text-sm">
+            {BIRTH_QS.filter((q) => prefs[q.key]).map((q) => (
+              <div key={q.key} className="flex gap-2">
+                <dt className="text-ink/60 shrink-0">{q.q}:</dt>
+                <dd className="font-medium">{prefs[q.key]}</dd>
+              </div>
+            ))}
+            {notes.trim() && (
+              <div className="pt-1">
+                <dt className="text-ink/60">Notes:</dt>
+                <dd className="mt-0.5 whitespace-pre-wrap">{notes}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
+
+      <div className="flex gap-2">
+        <button onClick={persist} className="flex-1 rounded-full bg-ink px-5 py-3 text-sm text-cream">Save</button>
+        <button onClick={exportPDF} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-cream px-5 py-3 text-sm ring-1 ring-zinc-950/10">
+          <Download className="size-4" /> Export PDF
+        </button>
+      </div>
     </div>
   );
 }
