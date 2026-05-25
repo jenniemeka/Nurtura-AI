@@ -20,6 +20,7 @@ import { Route as AppReelsRouteImport } from './routes/_app/reels'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppLearnRouteImport } from './routes/_app/learn'
+import { Route as AppExpertsRouteImport } from './routes/_app/experts'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCommunityRouteImport } from './routes/_app/community'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
@@ -80,6 +81,11 @@ const AppLearnRoute = AppLearnRouteImport.update({
   path: '/learn',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExpertsRoute = AppExpertsRouteImport.update({
+  id: '/experts',
+  path: '/experts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/_app/ai': typeof AppAiRoute
   '/_app/community': typeof AppCommunityRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/experts': typeof AppExpertsRoute
   '/_app/learn': typeof AppLearnRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/profile': typeof AppProfileRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/ai'
     | '/community'
     | '/dashboard'
+    | '/experts'
     | '/learn'
     | '/notifications'
     | '/profile'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/ai'
     | '/community'
     | '/dashboard'
+    | '/experts'
     | '/learn'
     | '/notifications'
     | '/profile'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/_app/ai'
     | '/_app/community'
     | '/_app/dashboard'
+    | '/_app/experts'
     | '/_app/learn'
     | '/_app/notifications'
     | '/_app/profile'
@@ -301,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLearnRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/experts': {
+      id: '/_app/experts'
+      path: '/experts'
+      fullPath: '/experts'
+      preLoaderRoute: typeof AppExpertsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -367,6 +386,7 @@ interface AppRouteChildren {
   AppAiRoute: typeof AppAiRoute
   AppCommunityRoute: typeof AppCommunityRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppExpertsRoute: typeof AppExpertsRoute
   AppLearnRoute: typeof AppLearnRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppProfileRoute: typeof AppProfileRoute
@@ -379,6 +399,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAiRoute: AppAiRoute,
   AppCommunityRoute: AppCommunityRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppExpertsRoute: AppExpertsRoute,
   AppLearnRoute: AppLearnRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
   AppProfileRoute: AppProfileRoute,
@@ -399,3 +420,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
