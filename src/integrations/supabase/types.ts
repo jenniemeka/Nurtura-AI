@@ -75,34 +75,40 @@ export type Database = {
       }
       articles: {
         Row: {
+          author_id: string | null
           body: string
           category: string
           cover_image_url: string | null
           created_at: string
           excerpt: string | null
           id: string
+          moderation_status: string
           read_minutes: number | null
           slug: string
           title: string
         }
         Insert: {
+          author_id?: string | null
           body: string
           category: string
           cover_image_url?: string | null
           created_at?: string
           excerpt?: string | null
           id?: string
+          moderation_status?: string
           read_minutes?: number | null
           slug: string
           title: string
         }
         Update: {
+          author_id?: string | null
           body?: string
           category?: string
           cover_image_url?: string | null
           created_at?: string
           excerpt?: string | null
           id?: string
+          moderation_status?: string
           read_minutes?: number | null
           slug?: string
           title?: string
@@ -182,6 +188,7 @@ export type Database = {
           group_id: string | null
           id: string
           likes_count: number
+          moderation_status: string
           title: string
           updated_at: string
           user_id: string
@@ -195,6 +202,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           likes_count?: number
+          moderation_status?: string
           title: string
           updated_at?: string
           user_id: string
@@ -208,6 +216,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           likes_count?: number
+          moderation_status?: string
           title?: string
           updated_at?: string
           user_id?: string
@@ -221,6 +230,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      expert_applications: {
+        Row: {
+          bio: string
+          created_at: string
+          credentials: string
+          full_name: string
+          id: string
+          review_notes: string | null
+          specialties: string[]
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio: string
+          created_at?: string
+          credentials: string
+          full_name: string
+          id?: string
+          review_notes?: string | null
+          specialties?: string[]
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string
+          created_at?: string
+          credentials?: string
+          full_name?: string
+          id?: string
+          review_notes?: string | null
+          specialties?: string[]
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expert_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string
+          created_at: string
+          display_name: string
+          id: string
+          specialties: string[]
+          title: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio: string
+          created_at?: string
+          display_name: string
+          id?: string
+          specialties?: string[]
+          title: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          specialties?: string[]
+          title?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: []
       }
       group_members: {
         Row: {
@@ -374,6 +461,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          moderation_status: string
           post_id: string
           user_id: string
         }
@@ -383,6 +471,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          moderation_status?: string
           post_id: string
           user_id: string
         }
@@ -392,6 +481,7 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          moderation_status?: string
           post_id?: string
           user_id?: string
         }
@@ -492,6 +582,7 @@ export type Database = {
       }
       reels: {
         Row: {
+          author_id: string | null
           category: string
           created_at: string
           description: string | null
@@ -499,11 +590,13 @@ export type Database = {
           expert_name: string | null
           id: string
           likes_count: number
+          moderation_status: string
           thumbnail_url: string | null
           title: string
           video_url: string | null
         }
         Insert: {
+          author_id?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -511,11 +604,13 @@ export type Database = {
           expert_name?: string | null
           id?: string
           likes_count?: number
+          moderation_status?: string
           thumbnail_url?: string | null
           title: string
           video_url?: string | null
         }
         Update: {
+          author_id?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -523,9 +618,31 @@ export type Database = {
           expert_name?: string | null
           id?: string
           likes_count?: number
+          moderation_status?: string
           thumbnail_url?: string | null
           title?: string
           video_url?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -534,10 +651,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "expert" | "parent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -664,6 +787,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "expert", "parent"],
+    },
   },
 } as const
