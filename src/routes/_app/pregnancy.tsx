@@ -3,8 +3,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 import {
-  Activity, Baby, BellRing, BookOpen, CalendarPlus, ClipboardList, Droplet,
+  Activity, Baby, BellRing, BookOpen, CalendarPlus, ClipboardList, Download, Droplet,
   Footprints, Heart, ListChecks, Moon, Plus, Scale, Smile, Stethoscope, Timer, Trash2,
 } from "lucide-react";
 import { getMe } from "@/lib/profile.functions";
@@ -40,6 +41,35 @@ function fruitFor(week: number) {
   let pick = keys[0];
   for (const k of keys) if (k <= week) pick = k;
   return FRUIT_SIZE[pick];
+}
+
+/* Per-week milestones + growth insights */
+const WEEK_INFO: Record<number, { milestone: string; insight: string; length?: string; weight?: string }> = {
+  4: { milestone: "Implantation complete", insight: "Neural tube and heart begin forming.", length: "2 mm" },
+  6: { milestone: "Heartbeat detectable", insight: "Tiny buds for arms and legs appear.", length: "5 mm" },
+  8: { milestone: "All major organs forming", insight: "Fingers and toes start to separate.", length: "1.6 cm" },
+  10: { milestone: "Vital organs functioning", insight: "Baby moves but you can't feel it yet.", length: "3 cm", weight: "4 g" },
+  12: { milestone: "End of first trimester", insight: "Reflexes develop; miscarriage risk drops sharply.", length: "5 cm", weight: "14 g" },
+  14: { milestone: "Facial expressions begin", insight: "Baby can squint, frown, and grimace.", length: "8 cm", weight: "40 g" },
+  16: { milestone: "Sex may be visible on ultrasound", insight: "Tiny bones hardening; eyes can move.", length: "12 cm", weight: "100 g" },
+  18: { milestone: "Hearing develops", insight: "Baby can hear your voice and heartbeat.", length: "14 cm", weight: "190 g" },
+  20: { milestone: "Halfway there — anatomy scan", insight: "You may start feeling first kicks.", length: "25 cm", weight: "300 g" },
+  22: { milestone: "Eyebrows and lashes form", insight: "Baby develops a sleep–wake rhythm.", length: "28 cm", weight: "430 g" },
+  24: { milestone: "Viability milestone", insight: "Lungs make surfactant; taste buds form.", length: "30 cm", weight: "600 g" },
+  26: { milestone: "Eyes open", insight: "Baby responds to sound and light.", length: "35 cm", weight: "760 g" },
+  28: { milestone: "Third trimester begins", insight: "Start daily kick counts; brain growth accelerates.", length: "38 cm", weight: "1 kg" },
+  30: { milestone: "Bone marrow makes blood cells", insight: "Baby's grip strengthens; eyesight sharpens.", length: "40 cm", weight: "1.3 kg" },
+  32: { milestone: "Practicing breathing", insight: "Skin smoothing; fingernails reach fingertips.", length: "42 cm", weight: "1.7 kg" },
+  34: { milestone: "Central nervous system maturing", insight: "Most babies turn head-down this month.", length: "45 cm", weight: "2.1 kg" },
+  36: { milestone: "Early term soon", insight: "Lungs nearly mature; gaining ~225 g per week.", length: "47 cm", weight: "2.6 kg" },
+  38: { milestone: "Full term", insight: "Vernix shedding; baby ready any day now.", length: "49 cm", weight: "3 kg" },
+  40: { milestone: "Due date", insight: "Watch for contractions, water breaking, or bloody show.", length: "50 cm", weight: "3.4 kg" },
+};
+function weekInfoFor(week: number) {
+  const keys = Object.keys(WEEK_INFO).map(Number).sort((a, b) => a - b);
+  let pick = keys[0];
+  for (const k of keys) if (k <= week) pick = k;
+  return WEEK_INFO[pick];
 }
 
 function PregnancyHub() {
