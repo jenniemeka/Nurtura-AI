@@ -19,6 +19,7 @@ import { Route as AppReelsRouteImport } from './routes/_app/reels'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppLearnRouteImport } from './routes/_app/learn'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppCommunityRouteImport } from './routes/_app/community'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
 import { Route as AppLearnSlugRouteImport } from './routes/_app/learn.$slug'
 
@@ -71,6 +72,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCommunityRoute = AppCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAiRoute = AppAiRouteImport.update({
   id: '/ai',
   path: '/ai',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/ai': typeof AppAiRoute
+  '/community': typeof AppCommunityRoute
   '/dashboard': typeof AppDashboardRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/profile': typeof AppProfileRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/ai': typeof AppAiRoute
+  '/community': typeof AppCommunityRoute
   '/dashboard': typeof AppDashboardRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/profile': typeof AppProfileRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/_app/ai': typeof AppAiRoute
+  '/_app/community': typeof AppCommunityRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/learn': typeof AppLearnRouteWithChildren
   '/_app/profile': typeof AppProfileRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/ai'
+    | '/community'
     | '/dashboard'
     | '/learn'
     | '/profile'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/ai'
+    | '/community'
     | '/dashboard'
     | '/learn'
     | '/profile'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/signup'
     | '/_app/ai'
+    | '/_app/community'
     | '/_app/dashboard'
     | '/_app/learn'
     | '/_app/profile'
@@ -246,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/community': {
+      id: '/_app/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof AppCommunityRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/ai': {
       id: '/_app/ai'
       path: '/ai'
@@ -277,6 +296,7 @@ const AppLearnRouteWithChildren = AppLearnRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAiRoute: typeof AppAiRoute
+  AppCommunityRoute: typeof AppCommunityRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppLearnRoute: typeof AppLearnRouteWithChildren
   AppProfileRoute: typeof AppProfileRoute
@@ -286,6 +306,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAiRoute: AppAiRoute,
+  AppCommunityRoute: AppCommunityRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppLearnRoute: AppLearnRouteWithChildren,
   AppProfileRoute: AppProfileRoute,
