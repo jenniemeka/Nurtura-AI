@@ -656,8 +656,10 @@ const BIRTH_QS: { key: string; q: string; options: string[] }[] = [
 function BirthPlanPanel() {
   const get = useServerFn(getBirthPlan);
   const save = useServerFn(saveBirthPlan);
+  const fetchMe = useServerFn(getMe);
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["birth-plan"], queryFn: () => get() });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
   const [prefs, setPrefs] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
 
@@ -676,6 +678,68 @@ function BirthPlanPanel() {
       toast.success("Birth plan saved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
+
+  function exportPDF() {
+    const answered = BIRTH_QS.filter((q) => prefs[q.key]);
+    if (!answered.length && !notes.trim()) {
+      toast.error("Make a few selections first");
+      return;
+    }
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+    const margin = 56;
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    let y = margin;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("Birth Plan", margin, y);
+    y += 26;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(110);
+    const parentName = me?.profile?.parent_name ?? "";
+    const meta = [
+      parentName && `Parent: ${parentName}`,
+      me?.babies?.[0]?.pregnancy_due_date && `Due date: ${new Date(me.babies[0].pregnancy_due_date).toLocaleDateString()}`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+    ].filter(Boolean).join("   ·   ");
+    doc.text(meta, margin, y);
+    y += 24;
+    doc.setTextColor(0);
+
+    const writeLine = (label: string, value: string) => {
+      if (y > pageH - margin - 40) { doc.addPage(); y = margin; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(label, margin, y);
+      y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      const lines = doc.splitTextToSize(value, pageW - margin * 2);
+      doc.text(lines, margin, y);
+      y += lines.length * 16 + 10;
+    };
+
+    for (const q of BIRTH_QS) {
+      writeLine(q.q, prefs[q.key] || "—");
+    }
+    if (notes.trim()) writeLine("Additional wishes", notes.trim());
+
+    if (y > pageH - margin - 40) { doc.addPage(); y = margin; }
+    doc.setFontSize(9);
+    doc.setTextColor(140);
+    doc.text(
+      "This birth plan reflects preferences and is not a medical directive. Discuss with your provider.",
+      margin, pageH - margin / 2,
+    );
+
+    doc.save(`birth-plan-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success("PDF downloaded");
+  }
+
+  const answeredCount = BIRTH_QS.filter((q) => prefs[q.key]).length;
 
   return (
     <div className="space-y-3">
@@ -698,7 +762,33 @@ function BirthPlanPanel() {
           placeholder="Special wishes, cultural practices, things to avoid…"
           className="mt-2 w-full rounded-2xl bg-cream px-3 py-2 text-sm ring-1 ring-zinc-950/10 outline-none" />
       </section>
-      <button onClick={persist} className="w-full rounded-full bg-ink px-5 py-3 text-sm text-cream">Save birth plan</button>
+
+      {(answeredCount > 0 || notes.trim()) && (
+        <section className="rounded-2xl bg-lavender/60 p-4 ring-1 ring-zinc-950/5">
+          <p className="text-xs uppercase tracking-[0.15em] text-ink/50 mb-2">Review</p>
+          <dl className="space-y-1.5 text-sm">
+            {BIRTH_QS.filter((q) => prefs[q.key]).map((q) => (
+              <div key={q.key} className="flex gap-2">
+                <dt className="text-ink/60 shrink-0">{q.q}:</dt>
+                <dd className="font-medium">{prefs[q.key]}</dd>
+              </div>
+            ))}
+            {notes.trim() && (
+              <div className="pt-1">
+                <dt className="text-ink/60">Notes:</dt>
+                <dd className="mt-0.5 whitespace-pre-wrap">{notes}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
+
+      <div className="flex gap-2">
+        <button onClick={persist} className="flex-1 rounded-full bg-ink px-5 py-3 text-sm text-cream">Save</button>
+        <button onClick={exportPDF} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-cream px-5 py-3 text-sm ring-1 ring-zinc-950/10">
+          <Download className="size-4" /> Export PDF
+        </button>
+      </div>
     </div>
   );
 }
