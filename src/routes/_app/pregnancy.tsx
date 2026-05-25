@@ -428,8 +428,29 @@ function Tools() {
   );
 }
 
+function RecentSessions({ kind, title, render }: { kind: "kick_session" | "contraction_session"; title: string; render: (d: any) => string }) {
+  const list = useServerFn(listPregnancyLogs);
+  const { data } = useQuery({ queryKey: ["preg-logs", kind], queryFn: () => list({ data: { kind, limit: 5 } }) });
+  const logs = data?.logs ?? [];
+  if (!logs.length) return null;
+  return (
+    <section className="mt-4">
+      <p className="text-xs uppercase tracking-[0.15em] text-ink/40 mb-2">{title}</p>
+      <ul className="space-y-2">
+        {logs.map((l: any) => (
+          <li key={l.id} className="rounded-2xl bg-card p-3 ring-1 ring-zinc-950/5 flex items-center justify-between">
+            <p className="text-sm">{render(l.data || {})}</p>
+            <p className="text-[10px] text-ink/40">{new Date(l.logged_at).toLocaleString()}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function KickCounter() {
   const add = useServerFn(addPregnancyLog);
+  const qc = useQueryClient();
   const [count, setCount] = useState(0);
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -451,6 +472,8 @@ function KickCounter() {
     if (count > 0) {
       try {
         await add({ data: { kind: "kick_session", data: { count, durationMs: ms } } });
+        qc.invalidateQueries({ queryKey: ["preg-logs", "kick_session"] });
+        qc.invalidateQueries({ queryKey: ["preg-logs"] });
         toast.success(`Logged ${count} kicks`);
       } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     }
@@ -461,27 +484,32 @@ function KickCounter() {
   const secs = Math.floor((elapsed % 60000) / 1000);
 
   return (
-    <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 text-center space-y-4">
-      <Baby className="size-6 mx-auto text-ink/60" />
-      <p className="text-xs text-ink/60">Tap each time you feel a kick. Aim for 10 kicks within 2 hours.</p>
-      <button onClick={tap} disabled={!running}
-        className="mx-auto block size-40 rounded-full bg-lavender/70 text-4xl font-semibold ring-1 ring-zinc-950/10 disabled:opacity-50">
-        {count}
-      </button>
-      <p className="text-sm tabular-nums text-ink/60">{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}</p>
-      <div className="flex gap-2 justify-center">
-        {!running ? (
-          <button onClick={start} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Start session</button>
-        ) : (
-          <button onClick={stop} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Stop & save</button>
-        )}
+    <div>
+      <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 text-center space-y-4">
+        <Baby className="size-6 mx-auto text-ink/60" />
+        <p className="text-xs text-ink/60">Tap each time you feel a kick. Aim for 10 kicks within 2 hours.</p>
+        <button onClick={tap} disabled={!running}
+          className="mx-auto block size-40 rounded-full bg-lavender/70 text-4xl font-semibold ring-1 ring-zinc-950/10 disabled:opacity-50">
+          {count}
+        </button>
+        <p className="text-sm tabular-nums text-ink/60">{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}</p>
+        <div className="flex gap-2 justify-center">
+          {!running ? (
+            <button onClick={start} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Start session</button>
+          ) : (
+            <button onClick={stop} className="rounded-full bg-ink px-5 py-2 text-sm text-cream">Stop & save</button>
+          )}
+        </div>
       </div>
+      <RecentSessions kind="kick_session" title="Recent kick sessions"
+        render={(d) => `${d.count ?? 0} kicks in ${Math.round((d.durationMs ?? 0) / 60000)} min`} />
     </div>
   );
 }
 
 function ContractionTimer() {
   const add = useServerFn(addPregnancyLog);
+  const qc = useQueryClient();
   const [contractions, setContractions] = useState<{ start: number; end?: number }[]>([]);
   const [active, setActive] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -511,33 +539,41 @@ function ContractionTimer() {
     if (!finished.length) return;
     try {
       await add({ data: { kind: "contraction_session", data: { contractions: finished, avgInterval, avgDur } } });
+      qc.invalidateQueries({ queryKey: ["preg-logs", "contraction_session"] });
+      qc.invalidateQueries({ queryKey: ["preg-logs"] });
       toast.success("Session saved");
       setContractions([]);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
   return (
-    <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 space-y-4">
-      <p className="text-xs text-ink/60 text-center">Tap to start a contraction, tap again when it ends.</p>
-      <button onClick={toggle}
-        className={`mx-auto block size-32 rounded-full text-lg font-medium ring-1 ring-zinc-950/10 ${active ? "bg-rose-100 text-rose-900" : "bg-lavender/70"}`}>
-        {active ? `${current}s` : "Tap"}
-      </button>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <Stat label="Count" value={finished.length} />
-        <Stat label="Avg length" value={`${avgDur}s`} />
-        <Stat label="Avg interval" value={`${avgInterval}s`} />
+    <div>
+      <div className="rounded-3xl bg-card p-6 ring-1 ring-zinc-950/5 space-y-4">
+        <p className="text-xs text-ink/60 text-center">Tap to start a contraction, tap again when it ends.</p>
+        <button onClick={toggle}
+          className={`mx-auto block size-32 rounded-full text-lg font-medium ring-1 ring-zinc-950/10 ${active ? "bg-rose-100 text-rose-900" : "bg-lavender/70"}`}>
+          {active ? `${current}s` : "Tap"}
+        </button>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <Stat label="Count" value={finished.length} />
+          <Stat label="Avg length" value={`${avgDur}s`} />
+          <Stat label="Avg interval" value={`${avgInterval}s`} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setContractions([])} className="flex-1 rounded-full bg-cream px-4 py-2 text-sm ring-1 ring-zinc-950/10">Clear</button>
+          <button onClick={save} disabled={!finished.length} className="flex-1 rounded-full bg-ink px-4 py-2 text-sm text-cream disabled:opacity-40">Save</button>
+        </div>
+        <p className="text-[11px] text-ink/50 text-center">
+          Contractions ~5 min apart, ~1 min long, for an hour → call your provider.
+        </p>
       </div>
-      <div className="flex gap-2">
-        <button onClick={() => setContractions([])} className="flex-1 rounded-full bg-cream px-4 py-2 text-sm ring-1 ring-zinc-950/10">Clear</button>
-        <button onClick={save} disabled={!finished.length} className="flex-1 rounded-full bg-ink px-4 py-2 text-sm text-cream disabled:opacity-40">Save</button>
-      </div>
-      <p className="text-[11px] text-ink/50 text-center">
-        Contractions ~5 min apart, ~1 min long, for an hour → call your provider.
-      </p>
+      <RecentSessions kind="contraction_session" title="Recent contraction sessions"
+        render={(d) => `${d.contractions?.length ?? 0} contractions · avg ${d.avgDur ?? 0}s, every ${d.avgInterval ?? 0}s`} />
     </div>
   );
 }
+
+
 
 function Stat({ label, value }: { label: string; value: any }) {
   return (
