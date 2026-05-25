@@ -135,6 +135,7 @@ function PregnancyHub() {
 function Overview({ week, trimester }: { week: number | null; trimester: number | null }) {
   const pct = week ? Math.min(100, Math.round((week / 40) * 100)) : 0;
   const fruit = week ? fruitFor(week) : null;
+  const info = week ? weekInfoFor(week) : null;
   return (
     <div className="space-y-4">
       <section className="rounded-3xl bg-lavender/60 p-5 ring-1 ring-zinc-950/5">
@@ -147,6 +148,30 @@ function Overview({ week, trimester }: { week: number | null; trimester: number 
         </div>
         <p className="mt-1 text-[10px] tracking-wider text-ink/40">{pct}% of 40 weeks</p>
       </section>
+
+      {info && (
+        <section className="rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
+          <p className="text-xs uppercase tracking-[0.15em] text-ink/40">This week's milestone</p>
+          <p className="mt-2 text-base font-medium">{info.milestone}</p>
+          <p className="mt-1 text-sm text-ink/70">{info.insight}</p>
+          {(info.length || info.weight) && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {info.length && (
+                <div className="rounded-2xl bg-cream p-3 ring-1 ring-zinc-950/10">
+                  <p className="text-[10px] uppercase tracking-wider text-ink/50">Length</p>
+                  <p className="mt-0.5 text-sm font-semibold">{info.length}</p>
+                </div>
+              )}
+              {info.weight && (
+                <div className="rounded-2xl bg-cream p-3 ring-1 ring-zinc-950/10">
+                  <p className="text-[10px] uppercase tracking-wider text-ink/50">Weight</p>
+                  <p className="mt-0.5 text-sm font-semibold">{info.weight}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="grid grid-cols-2 gap-3">
         <Link to="/ai" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
