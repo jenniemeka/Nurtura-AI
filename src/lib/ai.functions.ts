@@ -44,7 +44,14 @@ async function buildPersonalContext(supabase: any, userId: string) {
   const months = babyAgeMonths(baby);
   const parts: string[] = ["User context (use to tailor tone & examples; do not echo verbatim):"];
   if (profile?.parent_name) parts.push(`- Parent: ${profile.parent_name}`);
-  if (baby?.name) parts.push(`- Baby: ${baby.name} — stage: ${ageBand(months)}${months !== null && months >= 0 ? ` (~${Math.round(months)} months)` : ""}`);
+  if (baby?.is_pregnancy && baby?.pregnancy_due_date) {
+    const daysLeft = Math.round((new Date(baby.pregnancy_due_date).getTime() - Date.now()) / 86400000);
+    const week = Math.max(1, Math.min(40, 40 - Math.round(daysLeft / 7)));
+    const tri = week < 14 ? 1 : week < 28 ? 2 : 3;
+    parts.push(`- PREGNANCY MODE: ~week ${week} (trimester ${tri}), ${daysLeft} days to due date. Prioritize antenatal guidance and pregnancy safety.`);
+  } else if (baby?.name) {
+    parts.push(`- Baby: ${baby.name} — stage: ${ageBand(months)}${months !== null && months >= 0 ? ` (~${Math.round(months)} months)` : ""}`);
+  }
   if (profile?.concerns?.length) parts.push(`- Top concerns: ${profile.concerns.join(", ")}`);
   if (profile?.support_level) parts.push(`- Self-reported support level (1=overwhelmed, 5=confident): ${profile.support_level}. Adjust warmth accordingly.`);
   if (profile?.concerns_notes) parts.push(`- Notes from parent: ${profile.concerns_notes}`);
