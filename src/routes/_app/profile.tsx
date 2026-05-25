@@ -1,10 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { LogOut, ShieldCheck, Users, Sparkles, ShieldAlert, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getMe } from "@/lib/profile.functions";
+import { getMyRoles } from "@/lib/expert.functions";
 
 export const Route = createFileRoute("/_app/profile")({
   head: () => ({ meta: [{ title: "Profile — Nurtura" }] }),
@@ -15,7 +16,12 @@ function Profile() {
   const { user } = useAuth();
   const nav = useNavigate();
   const fetchMe = useServerFn(getMe);
+  const fetchRoles = useServerFn(getMyRoles);
   const { data } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const { data: roleData } = useQuery({ queryKey: ["my-roles"], queryFn: () => fetchRoles() });
+  const roles = roleData?.roles ?? [];
+  const isExpert = roles.includes("expert");
+  const isAdmin = roles.includes("admin");
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -52,9 +58,28 @@ function Profile() {
         </div>
       )}
 
+      <div className="space-y-2">
+        <NavCard to="/experts" icon={ShieldCheck} title="Verified experts" desc="Pediatricians, IBCLCs, sleep coaches." />
+        <NavCard to="/expert-portal" icon={Sparkles} title={isExpert ? "Expert workspace" : "Become an expert"} desc={isExpert ? "Publish articles and reels." : "Apply to share your expertise."} />
+        {isAdmin && <NavCard to="/admin" icon={ShieldAlert} title="Admin moderation" desc="Review applications and content." />}
+      </div>
+
       <button onClick={signOut} className="w-full rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5 text-left flex items-center gap-3 text-sm font-medium">
         <LogOut className="size-4" /> Sign out
       </button>
     </div>
+  );
+}
+
+function NavCard({ to, icon: Icon, title, desc }: { to: string; icon: any; title: string; desc: string }) {
+  return (
+    <Link to={to} className="flex items-center gap-3 rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5 hover:ring-ink/10 transition">
+      <div className="size-9 rounded-full bg-lavender grid place-items-center"><Icon className="size-4 text-ink/70" /></div>
+      <div className="flex-1">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-ink/50">{desc}</p>
+      </div>
+      <ArrowRight className="size-4 text-ink/30" />
+    </Link>
   );
 }

@@ -20,9 +20,12 @@ import { Route as AppReelsRouteImport } from './routes/_app/reels'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppLearnRouteImport } from './routes/_app/learn'
+import { Route as AppExpertsRouteImport } from './routes/_app/experts'
+import { Route as AppExpertPortalRouteImport } from './routes/_app/expert-portal'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCommunityRouteImport } from './routes/_app/community'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
+import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppLearnSlugRouteImport } from './routes/_app/learn.$slug'
 import { Route as AppCommunitySlugRouteImport } from './routes/_app/community.$slug'
 
@@ -80,6 +83,16 @@ const AppLearnRoute = AppLearnRouteImport.update({
   path: '/learn',
   getParentRoute: () => AppRoute,
 } as any)
+const AppExpertsRoute = AppExpertsRouteImport.update({
+  id: '/experts',
+  path: '/experts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExpertPortalRoute = AppExpertPortalRouteImport.update({
+  id: '/expert-portal',
+  path: '/expert-portal',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -93,6 +106,11 @@ const AppCommunityRoute = AppCommunityRouteImport.update({
 const AppAiRoute = AppAiRouteImport.update({
   id: '/ai',
   path: '/ai',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLearnSlugRoute = AppLearnSlugRouteImport.update({
@@ -111,9 +129,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AppAdminRoute
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/expert-portal': typeof AppExpertPortalRoute
+  '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
@@ -128,9 +149,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AppAdminRoute
   '/ai': typeof AppAiRoute
   '/community': typeof AppCommunityRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/expert-portal': typeof AppExpertPortalRoute
+  '/experts': typeof AppExpertsRoute
   '/learn': typeof AppLearnRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
@@ -147,9 +171,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/ai': typeof AppAiRoute
   '/_app/community': typeof AppCommunityRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/expert-portal': typeof AppExpertPortalRoute
+  '/_app/experts': typeof AppExpertsRoute
   '/_app/learn': typeof AppLearnRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/profile': typeof AppProfileRoute
@@ -166,9 +193,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/admin'
     | '/ai'
     | '/community'
     | '/dashboard'
+    | '/expert-portal'
+    | '/experts'
     | '/learn'
     | '/notifications'
     | '/profile'
@@ -183,9 +213,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/admin'
     | '/ai'
     | '/community'
     | '/dashboard'
+    | '/expert-portal'
+    | '/experts'
     | '/learn'
     | '/notifications'
     | '/profile'
@@ -201,9 +234,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/_app/admin'
     | '/_app/ai'
     | '/_app/community'
     | '/_app/dashboard'
+    | '/_app/expert-portal'
+    | '/_app/experts'
     | '/_app/learn'
     | '/_app/notifications'
     | '/_app/profile'
@@ -301,6 +337,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLearnRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/experts': {
+      id: '/_app/experts'
+      path: '/experts'
+      fullPath: '/experts'
+      preLoaderRoute: typeof AppExpertsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/expert-portal': {
+      id: '/_app/expert-portal'
+      path: '/expert-portal'
+      fullPath: '/expert-portal'
+      preLoaderRoute: typeof AppExpertPortalRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -320,6 +370,13 @@ declare module '@tanstack/react-router' {
       path: '/ai'
       fullPath: '/ai'
       preLoaderRoute: typeof AppAiRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/learn/$slug': {
@@ -364,9 +421,12 @@ const AppLearnRouteWithChildren = AppLearnRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppAiRoute: typeof AppAiRoute
   AppCommunityRoute: typeof AppCommunityRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppExpertPortalRoute: typeof AppExpertPortalRoute
+  AppExpertsRoute: typeof AppExpertsRoute
   AppLearnRoute: typeof AppLearnRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppProfileRoute: typeof AppProfileRoute
@@ -376,9 +436,12 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppAiRoute: AppAiRoute,
   AppCommunityRoute: AppCommunityRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppExpertPortalRoute: AppExpertPortalRoute,
+  AppExpertsRoute: AppExpertsRoute,
   AppLearnRoute: AppLearnRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
   AppProfileRoute: AppProfileRoute,
