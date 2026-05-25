@@ -15,7 +15,9 @@ export const getMe = createServerFn({ method: "GET" })
 
 const OnboardSchema = z.object({
   parentName: z.string().trim().min(1).max(80),
-  concerns: z.array(z.string().min(1).max(40)).max(8).default([]),
+  concerns: z.array(z.string().min(1).max(40)).max(12).default([]),
+  concernsNotes: z.string().trim().max(500).optional(),
+  supportLevel: z.number().int().min(1).max(5).optional(),
   baby: z.object({
     name: z.string().trim().min(1).max(60),
     isPregnancy: z.boolean(),
@@ -33,6 +35,8 @@ export const completeOnboarding = createServerFn({ method: "POST" })
       id: userId,
       parent_name: data.parentName,
       concerns: data.concerns,
+      concerns_notes: data.concernsNotes ?? null,
+      support_level: data.supportLevel ?? null,
       onboarded: true,
     });
     if (pErr) throw new Error(pErr.message);

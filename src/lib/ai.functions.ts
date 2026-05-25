@@ -10,13 +10,46 @@ const ChatSchema = z.object({
   })).min(1).max(40),
 });
 
-const SYSTEM_PROMPT = `You are Nurtura, a warm, supportive AI parenting companion for new and expecting parents.
+const BASE_SYSTEM = `You are Nurtura, a warm, supportive AI parenting companion for new and expecting parents.
 - Be calm, gentle, and reassuring. Acknowledge feelings before giving information.
 - Offer educational guidance about infant wellness, feeding, sleep, milestones, and development.
 - Never diagnose. When something could be medical, recommend speaking to a pediatrician or qualified professional.
 - Flag any red flags (high fever in young babies, breathing trouble, dehydration, decreased fetal movement) with clear urgency.
 - Keep answers concise (under 180 words) and structured. Use short paragraphs or 3-5 bullets.
 - Ground tips in mainstream pediatric guidance (AAP/WHO). Avoid cultural assumptions; be inclusive.`;
+
+function babyAgeMonths(b?: { is_pregnancy?: boolean; birth_date?: string | null; pregnancy_due_date?: string | null }) {
+  if (!b) return null;
+  if (b.is_pregnancy) return -1;
+  if (!b.birth_date) return null;
+  return (Date.now() - new Date(b.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+}
+
+function ageBand(m: number | null): string {
+  if (m === null) return "unknown stage";
+  if (m < 0) return "pregnancy";
+  if (m < 3) return "newborn (0-2 months)";
+  if (m < 6) return "young infant (3-5 months)";
+  if (m < 12) return "older infant (6-11 months)";
+  if (m < 24) return "toddler (12-23 months)";
+  return "young child (2+ years)";
+}
+
+async function buildPersonalContext(supabase: any, userId: string) {
+  const [{ data: profile }, { data: babies }] = await Promise.all([
+    supabase.from("profiles").select("parent_name, concerns, concerns_notes, support_level").eq("id", userId).maybeSingle(),
+    supabase.from("babies").select("name, is_pregnancy, birth_date, pregnancy_due_date").eq("user_id", userId).order("created_at").limit(1),
+  ]);
+  const baby = babies?.[0];
+  const months = babyAgeMonths(baby);
+  const parts: string[] = ["User context (use to tailor tone & examples; do not echo verbatim):"];
+  if (profile?.parent_name) parts.push(`- Parent: ${profile.parent_name}`);
+  if (baby?.name) parts.push(`- Baby: ${baby.name} — stage: ${ageBand(months)}${months !== null && months >= 0 ? ` (~${Math.round(months)} months)` : ""}`);
+  if (profile?.concerns?.length) parts.push(`- Top concerns: ${profile.concerns.join(", ")}`);
+  if (profile?.support_level) parts.push(`- Self-reported support level (1=overwhelmed, 5=confident): ${profile.support_level}. Adjust warmth accordingly.`);
+  if (profile?.concerns_notes) parts.push(`- Notes from parent: ${profile.concerns_notes}`);
+  return parts.length > 1 ? parts.join("\n") : "";
+}
 
 export const askAi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -48,6 +81,9 @@ export const askAi = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
+    const personal = await buildPersonalContext(supabase, userId);
+    const system = personal ? `${BASE_SYSTEM}\n\n${personal}` : BASE_SYSTEM;
+
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -57,7 +93,7 @@ export const askAi = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: system },
           ...data.messages,
         ],
       }),
@@ -86,37 +122,69 @@ export const askAi = createServerFn({ method: "POST" })
     return { reply, conversationId, error: null };
   });
 
-const SuggestSchema = z.object({ babyAgeMonths: z.number().min(-9).max(72).optional() });
-
-export const suggestPrompts = createServerFn({ method: "POST" })
+export const suggestPrompts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => SuggestSchema.parse(input))
-  .handler(async ({ data }) => {
-    const age = data.babyAgeMonths;
-    if (age === undefined || age < 0) {
-      return { prompts: [
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const [{ data: profile }, { data: babies }] = await Promise.all([
+      supabase.from("profiles").select("concerns").eq("id", userId).maybeSingle(),
+      supabase.from("babies").select("is_pregnancy, birth_date").eq("user_id", userId).order("created_at").limit(1),
+    ]);
+    const months = babyAgeMonths(babies?.[0]);
+    const concerns: string[] = profile?.concerns ?? [];
+
+    const base: string[] = [];
+    if (months === null || months < 0) {
+      base.push(
         "How should I prepare for my third trimester?",
         "What helps with morning sickness?",
         "When should I pack my hospital bag?",
         "How do I tell real contractions from Braxton-Hicks?",
-      ] };
+      );
+    } else if (months < 3) {
+      base.push(
+        "Why won't my baby latch?",
+        "How much sleep is normal at this age?",
+        "Is it okay if my baby cries a lot in the evening?",
+        "What's a safe sleeping position?",
+      );
+    } else if (months < 6) {
+      base.push(
+        "Is my baby ready for solids?",
+        "How do I handle the 4-month sleep regression?",
+        "What is tummy time and how often should we do it?",
+        "When should my baby roll over?",
+      );
+    } else if (months < 12) {
+      base.push(
+        "What are common first foods?",
+        "When should my baby start crawling?",
+        "How can I support speech development?",
+        "How much milk do they still need?",
+      );
+    } else {
+      base.push(
+        "Tips for managing toddler tantrums?",
+        "When should I start potty training?",
+        "How do I encourage two-word phrases?",
+        "Healthy snack ideas for a picky eater?",
+      );
     }
-    if (age < 3) return { prompts: [
-      "Why won't my baby latch?",
-      "How much sleep is normal at this age?",
-      "Is it okay if my baby cries a lot in the evening?",
-      "What's a safe sleeping position?",
-    ] };
-    if (age < 6) return { prompts: [
-      "Is my baby ready for solids?",
-      "How do I handle the 4-month sleep regression?",
-      "What is tummy time and how often should we do it?",
-      "When should my baby roll over?",
-    ] };
-    return { prompts: [
-      "What are common first foods?",
-      "When should my baby start crawling?",
-      "How can I support speech development?",
-      "How much milk do they still need?",
-    ] };
+
+    // Concern-aware prompts
+    const concernPrompts: Record<string, string[]> = {
+      Sleep: ["Help us build a calmer bedtime routine.", "How do I handle short naps?"],
+      Feeding: ["Is my baby getting enough?", "Tips for a fussy eater."],
+      Crying: ["Gentle ways to soothe a crying baby.", "Could this be colic?"],
+      Development: ["What milestones should I look for this month?"],
+      Postpartum: ["I'm exhausted — how do I recover?", "How do I know if it's baby blues vs. PPD?"],
+      "Mental load": ["Help me split parenting tasks fairly.", "I feel overwhelmed — what can I do today?"],
+      Health: ["When is a fever worth a doctor visit?"],
+      Routine: ["Suggest a simple daily rhythm for us."],
+    };
+    const extras = concerns.flatMap((c) => concernPrompts[c] ?? []).slice(0, 3);
+
+    // De-dupe, cap at 6
+    const all = Array.from(new Set([...extras, ...base])).slice(0, 6);
+    return { prompts: all };
   });

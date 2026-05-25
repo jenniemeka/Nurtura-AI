@@ -527,26 +527,32 @@ export type Database = {
       profiles: {
         Row: {
           concerns: string[] | null
+          concerns_notes: string | null
           created_at: string
           id: string
           onboarded: boolean
           parent_name: string | null
+          support_level: number | null
           updated_at: string
         }
         Insert: {
           concerns?: string[] | null
+          concerns_notes?: string | null
           created_at?: string
           id: string
           onboarded?: boolean
           parent_name?: string | null
+          support_level?: number | null
           updated_at?: string
         }
         Update: {
           concerns?: string[] | null
+          concerns_notes?: string | null
           created_at?: string
           id?: string
           onboarded?: boolean
           parent_name?: string | null
+          support_level?: number | null
           updated_at?: string
         }
         Relationships: []

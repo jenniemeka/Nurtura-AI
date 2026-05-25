@@ -14,23 +14,15 @@ export const Route = createFileRoute("/_app/ai")({
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-function babyMonths(b?: { birth_date?: string | null; pregnancy_due_date?: string | null; is_pregnancy?: boolean }) {
-  if (!b) return undefined;
-  if (b.is_pregnancy) return -1;
-  if (!b.birth_date) return undefined;
-  return (Date.now() - new Date(b.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 30.44);
-}
-
 function AiChat() {
   const ask = useServerFn(askAi);
   const fetchMe = useServerFn(getMe);
   const fetchPrompts = useServerFn(suggestPrompts);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
-  const months = babyMonths(me?.babies?.[0]);
   const { data: pData } = useQuery({
-    queryKey: ["prompts", months],
-    queryFn: () => fetchPrompts({ data: { babyAgeMonths: months } }),
+    queryKey: ["prompts"],
+    queryFn: () => fetchPrompts(),
   });
 
   const [messages, setMessages] = useState<Msg[]>([]);
