@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppTrackerRouteImport } from './routes/_app/tracker'
+import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppReelsRouteImport } from './routes/_app/reels'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
@@ -52,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppTrackerRoute = AppTrackerRouteImport.update({
   id: '/tracker',
   path: '/tracker',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSearchRoute = AppSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReelsRoute = AppReelsRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
   '/reels': typeof AppReelsRoute
+  '/search': typeof AppSearchRoute
   '/tracker': typeof AppTrackerRoute
   '/community/$slug': typeof AppCommunitySlugRoute
   '/learn/$slug': typeof AppLearnSlugRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
   '/reels': typeof AppReelsRoute
+  '/search': typeof AppSearchRoute
   '/tracker': typeof AppTrackerRoute
   '/community/$slug': typeof AppCommunitySlugRoute
   '/learn/$slug': typeof AppLearnSlugRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/reels': typeof AppReelsRoute
+  '/_app/search': typeof AppSearchRoute
   '/_app/tracker': typeof AppTrackerRoute
   '/_app/community/$slug': typeof AppCommunitySlugRoute
   '/_app/learn/$slug': typeof AppLearnSlugRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/profile'
     | '/reels'
+    | '/search'
     | '/tracker'
     | '/community/$slug'
     | '/learn/$slug'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/profile'
     | '/reels'
+    | '/search'
     | '/tracker'
     | '/community/$slug'
     | '/learn/$slug'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/_app/notifications'
     | '/_app/profile'
     | '/_app/reels'
+    | '/_app/search'
     | '/_app/tracker'
     | '/_app/community/$slug'
     | '/_app/learn/$slug'
@@ -252,6 +264,13 @@ declare module '@tanstack/react-router' {
       path: '/tracker'
       fullPath: '/tracker'
       preLoaderRoute: typeof AppTrackerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/search': {
+      id: '/_app/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AppSearchRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/reels': {
@@ -352,6 +371,7 @@ interface AppRouteChildren {
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppProfileRoute: typeof AppProfileRoute
   AppReelsRoute: typeof AppReelsRoute
+  AppSearchRoute: typeof AppSearchRoute
   AppTrackerRoute: typeof AppTrackerRoute
 }
 
@@ -363,6 +383,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotificationsRoute: AppNotificationsRoute,
   AppProfileRoute: AppProfileRoute,
   AppReelsRoute: AppReelsRoute,
+  AppSearchRoute: AppSearchRoute,
   AppTrackerRoute: AppTrackerRoute,
 }
 
