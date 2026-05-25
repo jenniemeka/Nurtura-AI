@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, Volume2, VolumeX, Pause } from "lucide-react";
+import { Heart, Volume2, VolumeX, Pause, Search, X } from "lucide-react";
 import { listReels, toggleReelLike } from "@/lib/community.functions";
 
 export const Route = createFileRoute("/_app/reels")({
@@ -10,36 +10,79 @@ export const Route = createFileRoute("/_app/reels")({
   component: ReelsPage,
 });
 
-const CATEGORIES = ["All", "sleep", "feeding", "development", "soothing", "health"] as const;
+const CATEGORIES = [
+  "All", "sleep", "feeding", "development", "soothing", "health",
+  "antenatal", "nutrition", "prenatal-exercise", "birth-prep",
+] as const;
 
 function ReelsPage() {
   const fetchReels = useServerFn(listReels);
   const { data } = useQuery({ queryKey: ["reels"], queryFn: () => fetchReels() });
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("All");
   const [muted, setMuted] = useState(true);
+  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const reels = useMemo(() => {
     const all = data?.reels ?? [];
-    return category === "All" ? all : all.filter((r: any) => r.category === category);
-  }, [data, category]);
+    const q = query.trim().toLowerCase();
+    return all.filter((r: any) => {
+      if (category !== "All" && r.category !== category) return false;
+      if (!q) return true;
+      return (
+        (r.title ?? "").toLowerCase().includes(q) ||
+        (r.description ?? "").toLowerCase().includes(q) ||
+        (r.expert_name ?? "").toLowerCase().includes(q) ||
+        (r.category ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [data, category, query]);
 
   return (
     <div className="-mx-5 -mt-2">
-      {/* Sticky category bar */}
       <div className="sticky top-0 z-20 bg-cream/85 backdrop-blur px-5 pt-2 pb-3">
-        <div className="flex items-end justify-between">
-          <div>
+        <div className="flex items-end justify-between gap-2">
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.18em] text-ink/40">Watch</p>
             <h1 className="text-2xl font-semibold tracking-tight">Short lessons</h1>
           </div>
-          <button
-            onClick={() => setMuted((m) => !m)}
-            className="size-9 grid place-items-center rounded-full bg-card ring-1 ring-zinc-950/10"
-            aria-label={muted ? "Unmute" : "Mute"}
-          >
-            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setSearchOpen((s) => !s)}
+              className="size-9 grid place-items-center rounded-full bg-card ring-1 ring-zinc-950/10"
+              aria-label="Search"
+            >
+              <Search className="size-4" />
+            </button>
+            <button
+              onClick={() => setMuted((m) => !m)}
+              className="size-9 grid place-items-center rounded-full bg-card ring-1 ring-zinc-950/10"
+              aria-label={muted ? "Unmute" : "Mute"}
+            >
+              {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+            </button>
+          </div>
         </div>
+
+        {searchOpen && (
+          <div className="mt-3 flex items-center gap-2 rounded-full bg-card px-3 py-1.5 ring-1 ring-zinc-950/10">
+            <Search className="size-3.5 text-ink/50" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search videos…"
+              maxLength={80}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink/40"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} className="size-6 grid place-items-center rounded-full hover:bg-cream" aria-label="Clear">
+                <X className="size-3.5 text-ink/50" />
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar">
           {CATEGORIES.map((c) => (
             <button
@@ -49,20 +92,19 @@ function ReelsPage() {
                 category === c ? "bg-ink text-cream ring-ink" : "bg-card text-ink/70 ring-zinc-950/10"
               }`}
             >
-              {c}
+              {c.replace("-", " ")}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Vertical snap feed */}
-      <div className="h-[calc(100vh-220px)] overflow-y-auto snap-y snap-mandatory no-scrollbar">
+      <div className="h-[calc(100vh-260px)] overflow-y-auto snap-y snap-mandatory no-scrollbar">
         {reels.map((r: any) => (
           <ReelItem key={r.id} reel={r} muted={muted} />
         ))}
         {!reels.length && (
           <div className="h-full grid place-items-center px-8 text-center text-sm text-ink/50">
-            No lessons in this category yet.
+            {query ? `No videos match "${query}".` : "No lessons in this category yet."}
           </div>
         )}
       </div>
