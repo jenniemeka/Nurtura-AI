@@ -1021,6 +1021,32 @@ function BirthPlanPanel() {
         </section>
       )}
 
+      <section className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
+        <div className="flex items-center gap-2">
+          <Share2 className="size-4 text-ink/60" />
+          <p className="text-sm font-medium">Share your plan</p>
+        </div>
+        {shareToken ? (
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center gap-2 rounded-full bg-cream px-3 py-2 ring-1 ring-zinc-950/10">
+              <Link2 className="size-3.5 text-ink/50 shrink-0" />
+              <p className="flex-1 truncate text-[11px] text-ink/70">
+                {typeof window !== "undefined" ? `${window.location.origin}/share/birth-plan/${shareToken}` : ""}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={copyLink} className="flex-1 rounded-full bg-ink px-3 py-2 text-xs text-cream">Copy link</button>
+              <button onClick={revoke} className="flex-1 rounded-full bg-cream px-3 py-2 text-xs ring-1 ring-zinc-950/10">Disable link</button>
+            </div>
+            <p className="text-[10px] text-ink/40">Anyone with this link can view your plan. Disable any time.</p>
+          </div>
+        ) : (
+          <button onClick={createShareLink} className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs text-cream">
+            <Share2 className="size-3.5" /> Generate share link
+          </button>
+        )}
+      </section>
+
       <div className="flex gap-2">
         <button onClick={persist} className="flex-1 rounded-full bg-ink px-5 py-3 text-sm text-cream">Save</button>
         <button onClick={exportPDF} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-cream px-5 py-3 text-sm ring-1 ring-zinc-950/10">
@@ -1030,3 +1056,4 @@ function BirthPlanPanel() {
     </div>
   );
 }
+
