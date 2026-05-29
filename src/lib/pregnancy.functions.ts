@@ -9,10 +9,13 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const ApptSchema = z.object({
   title: z.string().trim().min(1).max(120),
   notes: z.string().trim().max(500).optional(),
-  kind: z.enum(["appointment", "scan", "supplement", "hydration", "other"]).default("appointment"),
+  kind: z.enum(["appointment", "scan", "supplement", "hydration", "other", "kick", "exercise"]).default("appointment"),
   scheduledAt: z.string().min(1),
   reminderMinutes: z.number().int().min(0).max(10080).optional(),
+  recurrence: z.enum(["none", "daily", "weekly", "hourly"]).default("none"),
+  notify: z.boolean().default(true),
 });
+
 
 export const listAppointments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
