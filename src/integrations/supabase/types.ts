@@ -80,6 +80,8 @@ export type Database = {
           id: string
           kind: string
           notes: string | null
+          notify: boolean
+          recurrence: string
           reminder_minutes: number | null
           scheduled_at: string
           title: string
@@ -92,6 +94,8 @@ export type Database = {
           id?: string
           kind?: string
           notes?: string | null
+          notify?: boolean
+          recurrence?: string
           reminder_minutes?: number | null
           scheduled_at: string
           title: string
@@ -104,6 +108,8 @@ export type Database = {
           id?: string
           kind?: string
           notes?: string | null
+          notify?: boolean
+          recurrence?: string
           reminder_minutes?: number | null
           scheduled_at?: string
           title?: string
@@ -195,6 +201,8 @@ export type Database = {
           created_at: string
           id: string
           preferences: Json
+          share_token: string | null
+          shared_at: string | null
           updated_at: string
           user_id: string
         }
@@ -202,6 +210,8 @@ export type Database = {
           created_at?: string
           id?: string
           preferences?: Json
+          share_token?: string | null
+          shared_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -209,6 +219,8 @@ export type Database = {
           created_at?: string
           id?: string
           preferences?: Json
+          share_token?: string | null
+          shared_at?: string | null
           updated_at?: string
           user_id?: string
         }
