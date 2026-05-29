@@ -484,9 +484,96 @@ function TrackingPanel() {
           {(data?.logs ?? []).length === 0 && <li className="text-xs text-ink/50">No logs yet.</li>}
         </ul>
       </section>
+
+      <TrendsCharts />
     </div>
   );
 }
+
+function TrendsCharts() {
+  const list = useServerFn(listPregnancyLogs);
+  const { data: kicksData } = useQuery({
+    queryKey: ["preg-logs", "kick_session", "trends"],
+    queryFn: () => list({ data: { kind: "kick_session", limit: 60 } }),
+  });
+  const { data: contData } = useQuery({
+    queryKey: ["preg-logs", "contraction_session", "trends"],
+    queryFn: () => list({ data: { kind: "contraction_session", limit: 60 } }),
+  });
+
+  const kicksByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    (kicksData?.logs ?? []).forEach((l: any) => {
+      const day = new Date(l.logged_at).toISOString().slice(0, 10);
+      map.set(day, (map.get(day) ?? 0) + (l.data?.count ?? 0));
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([day, count]) => ({ day: day.slice(5), count }));
+  }, [kicksData]);
+
+  const contractionsByDay = useMemo(() => {
+    const map = new Map<string, { count: number; avgDur: number; n: number }>();
+    (contData?.logs ?? []).forEach((l: any) => {
+      const day = new Date(l.logged_at).toISOString().slice(0, 10);
+      const cur = map.get(day) ?? { count: 0, avgDur: 0, n: 0 };
+      const c = l.data?.contractions?.length ?? 0;
+      const dur = l.data?.avgDur ?? 0;
+      map.set(day, { count: cur.count + c, avgDur: cur.avgDur + dur, n: cur.n + 1 });
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([day, v]) => ({ day: day.slice(5), count: v.count, avgDur: v.n ? Math.round(v.avgDur / v.n) : 0 }));
+  }, [contData]);
+
+  if (!kicksByDay.length && !contractionsByDay.length) return null;
+
+  return (
+    <section className="space-y-3">
+      <p className="text-xs uppercase tracking-[0.15em] text-ink/40">Trends</p>
+
+      {kicksByDay.length > 0 && (
+        <div className="rounded-3xl bg-card p-4 ring-1 ring-zinc-950/5">
+          <p className="text-sm font-medium">Kicks per day</p>
+          <p className="text-[11px] text-ink/50 mb-2">Last 14 days with activity</p>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={kicksByDay} margin={{ top: 6, right: 6, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                <Bar dataKey="count" fill="#1f1d1b" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {contractionsByDay.length > 0 && (
+        <div className="rounded-3xl bg-card p-4 ring-1 ring-zinc-950/5">
+          <p className="text-sm font-medium">Contractions per day</p>
+          <p className="text-[11px] text-ink/50 mb-2">Count and average duration (sec)</p>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={contractionsByDay} margin={{ top: 6, right: 6, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                <Line type="monotone" dataKey="count" stroke="#1f1d1b" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="avgDur" stroke="#a78bfa" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function summarizeLog(l: any) {
   const d = l.data || {};
