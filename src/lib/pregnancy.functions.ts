@@ -42,7 +42,10 @@ export const addAppointment = createServerFn({ method: "POST" })
       kind: data.kind,
       scheduled_at: data.scheduledAt,
       reminder_minutes: data.reminderMinutes ?? 60,
+      recurrence: data.recurrence,
+      notify: data.notify,
     });
+
     if (error) throw new Error(error.message);
     return { ok: true };
   });
