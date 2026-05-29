@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:auth": "vitest run tests/auth-signup-login.test.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
