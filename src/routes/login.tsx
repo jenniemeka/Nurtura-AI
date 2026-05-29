@@ -3,6 +3,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { explainAuthError, type AuthHint } from "@/lib/auth-errors";
+import { AuthAlert } from "@/components/auth-alert";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Log in — Nurtura" }, { name: "description", content: "Welcome back to Nurtura." }] }),
@@ -14,19 +16,27 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hint, setHint] = useState<AuthHint | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setHint(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      setHint(explainAuthError(error.message, "login"));
+      return;
+    }
     nav({ to: "/dashboard" });
   }
 
   async function google() {
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/dashboard" });
-    if (r?.error) toast.error(r.error.message);
+    if (r?.error) {
+      setHint(explainAuthError(r.error.message, "login"));
+      toast.error(r.error.message);
+    }
   }
 
   return (
@@ -35,6 +45,7 @@ function Login() {
         Continue with Google
       </button>
       <Divider />
+      <AuthAlert hint={hint} email={email} onResent={() => setHint(null)} />
       <form onSubmit={onSubmit} className="space-y-3">
         <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
@@ -48,6 +59,7 @@ function Login() {
     </AuthShell>
   );
 }
+
 
 export function AuthShell({ title, sub, children }: { title: string; sub: string; children: React.ReactNode }) {
   return (

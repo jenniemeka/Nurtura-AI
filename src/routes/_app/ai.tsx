@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Send, Sparkles } from "lucide-react";
+import { Send, Sparkles, Phone, Siren } from "lucide-react";
 import { toast } from "sonner";
-import { askAi, suggestPrompts } from "@/lib/ai.functions";
+import { askAi, suggestPrompts, type ClinicianGuidance } from "@/lib/ai.functions";
 import { getMe } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/_app/ai")({
@@ -12,7 +12,34 @@ export const Route = createFileRoute("/_app/ai")({
   component: AiChat,
 });
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; guidance?: ClinicianGuidance | null };
+
+function ClinicianCard({ g }: { g: ClinicianGuidance }) {
+  return (
+    <div className="mt-2 rounded-2xl bg-lavender/50 p-4 ring-1 ring-zinc-950/5 text-xs space-y-3">
+      <p className="text-[10px] uppercase tracking-[0.15em] text-ink/50">
+        Clinician guidance · week {g.week} · trimester {g.trimester}
+      </p>
+      <div>
+        <p className="flex items-center gap-1.5 font-medium text-ink">
+          <Phone className="size-3.5" /> Call your clinician if you have:
+        </p>
+        <ul className="mt-1.5 space-y-1 list-disc list-inside text-ink/75">
+          {g.callClinician.map((x, i) => <li key={i}>{x}</li>)}
+        </ul>
+      </div>
+      <div>
+        <p className="flex items-center gap-1.5 font-medium text-rose-800">
+          <Siren className="size-3.5" /> Go to L&amp;D or the ER for:
+        </p>
+        <ul className="mt-1.5 space-y-1 list-disc list-inside text-rose-900/80">
+          {g.goToER.map((x, i) => <li key={i}>{x}</li>)}
+        </ul>
+      </div>
+      <p className="text-ink/55 italic">{g.reminder}</p>
+    </div>
+  );
+}
 
 function AiChat() {
   const ask = useServerFn(askAi);
@@ -38,10 +65,10 @@ function AiChat() {
     setInput("");
     setBusy(true);
     try {
-      const r = await ask({ data: { conversationId: convoId, messages: next } });
+      const r = await ask({ data: { conversationId: convoId, messages: next.map(({ role, content }) => ({ role, content })) } });
       if (r.error) toast.error(r.error);
       if (r.conversationId) setConvoId(r.conversationId);
-      if (r.reply) setMessages((m) => [...m, { role: "assistant", content: r.reply! }]);
+      if (r.reply) setMessages((m) => [...m, { role: "assistant", content: r.reply!, guidance: r.guidance ?? null }]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -70,8 +97,11 @@ function AiChat() {
 
       <div className="flex-1 space-y-3">
         {messages.map((m, i) => (
-          <div key={i} className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${m.role === "user" ? "ml-auto bg-ink text-cream" : "bg-card ring-1 ring-zinc-950/5"}`}>
-            {m.content}
+          <div key={i} className={m.role === "user" ? "ml-auto max-w-[85%]" : "max-w-[85%]"}>
+            <div className={`rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${m.role === "user" ? "bg-ink text-cream" : "bg-card ring-1 ring-zinc-950/5"}`}>
+              {m.content}
+            </div>
+            {m.role === "assistant" && m.guidance && <ClinicianCard g={m.guidance} />}
           </div>
         ))}
         {busy && <div className="bg-card ring-1 ring-zinc-950/5 rounded-2xl px-4 py-3 text-sm text-ink/50 max-w-[85%]">Thinking gently…</div>}

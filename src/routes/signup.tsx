@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { AuthShell, Input, Divider } from "./login";
+import { explainAuthError, signupVerificationHint, type AuthHint } from "@/lib/auth-errors";
+import { AuthAlert } from "@/components/auth-alert";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Sign up — Nurtura" }, { name: "description", content: "Start your parenting journey with Nurtura." }] }),
@@ -16,11 +17,13 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hint, setHint] = useState<AuthHint | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    setHint(null);
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -29,14 +32,21 @@ function Signup() {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Welcome to Nurtura ✨");
-    nav({ to: "/onboarding" });
+    if (error) {
+      setHint(explainAuthError(error.message, "signup"));
+      return;
+    }
+    // If session is present, auto-confirm is on — proceed. Otherwise show verification hint.
+    if (data.session) {
+      nav({ to: "/onboarding" });
+    } else {
+      setHint(signupVerificationHint(true));
+    }
   }
 
   async function google() {
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/onboarding" });
-    if (r?.error) toast.error(r.error.message);
+    if (r?.error) setHint(explainAuthError(r.error.message, "signup"));
   }
 
   return (
@@ -45,6 +55,7 @@ function Signup() {
         Continue with Google
       </button>
       <Divider />
+      <AuthAlert hint={hint} email={email} onResent={() => setHint(null)} />
       <form onSubmit={onSubmit} className="space-y-3">
         <Input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
         <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
