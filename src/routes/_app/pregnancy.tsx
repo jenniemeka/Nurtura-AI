@@ -177,18 +177,32 @@ function Overview({ week, trimester }: { week: number | null; trimester: number 
         </section>
       )}
 
-      <section className="grid grid-cols-2 gap-3">
-        <Link to="/ai" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
-          <Stethoscope className="size-5 text-ink/70" />
-          <p className="mt-2 font-medium text-sm">Ask Nurtura AI</p>
-          <p className="text-xs text-ink/50 mt-0.5">Pregnancy-safe answers.</p>
+      <section className="rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-4 text-ink/60" />
+          <p className="text-sm font-medium">Ask your pregnancy assistant</p>
+        </div>
+        <p className="mt-1 text-xs text-ink/60">
+          Tuned to week {week ?? "—"} · trimester {trimester ?? "—"}. Safe, non-diagnostic guidance.
+        </p>
+        <Link to="/ai" className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs text-cream">
+          <Stethoscope className="size-3.5" /> Open assistant
         </Link>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
         <Link to="/reels" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
           <BookOpen className="size-5 text-ink/70" />
           <p className="mt-2 font-medium text-sm">Antenatal videos</p>
           <p className="text-xs text-ink/50 mt-0.5">Care, nutrition, exercises.</p>
         </Link>
+        <Link to="/learn" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
+          <BookOpen className="size-5 text-ink/70" />
+          <p className="mt-2 font-medium text-sm">Articles</p>
+          <p className="text-xs text-ink/50 mt-0.5">Curated reads.</p>
+        </Link>
       </section>
+
 
       <section className="rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
         <p className="text-xs uppercase tracking-[0.15em] text-ink/40">This trimester</p>
