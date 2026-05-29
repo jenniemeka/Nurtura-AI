@@ -168,7 +168,7 @@ export const askAi = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const personal = await buildPersonalContext(supabase, userId);
+    const { system: personal, guidance } = await buildPersonalContext(supabase, userId);
     const system = personal ? `${BASE_SYSTEM}\n\n${personal}` : BASE_SYSTEM;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -187,11 +187,11 @@ export const askAi = createServerFn({ method: "POST" })
     });
 
     if (!res.ok) {
-      if (res.status === 429) return { error: "Too many requests. Please try again in a moment.", conversationId, reply: null };
-      if (res.status === 402) return { error: "AI credits exhausted. Add credits in workspace settings.", conversationId, reply: null };
+      if (res.status === 429) return { error: "Too many requests. Please try again in a moment.", conversationId, reply: null, guidance };
+      if (res.status === 402) return { error: "AI credits exhausted. Add credits in workspace settings.", conversationId, reply: null, guidance };
       const t = await res.text();
       console.error("AI gateway error:", res.status, t);
-      return { error: "AI is temporarily unavailable.", conversationId, reply: null };
+      return { error: "AI is temporarily unavailable.", conversationId, reply: null, guidance };
     }
 
     const json = await res.json();
@@ -206,8 +206,9 @@ export const askAi = createServerFn({ method: "POST" })
       });
     }
 
-    return { reply, conversationId, error: null };
+    return { reply, conversationId, error: null, guidance };
   });
+
 
 export const suggestPrompts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
