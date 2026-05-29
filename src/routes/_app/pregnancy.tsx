@@ -227,33 +227,110 @@ function Reminders() {
 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<"appointment" | "scan" | "supplement" | "hydration" | "other">("appointment");
+  const [kind, setKind] = useState<"appointment" | "scan" | "supplement" | "hydration" | "other" | "kick" | "exercise">("appointment");
   const [when, setWhen] = useState("");
   const [notes, setNotes] = useState("");
+  const [recurrence, setRecurrence] = useState<"none" | "hourly" | "daily" | "weekly">("none");
+  const [notify, setNotify] = useState(true);
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported",
+  );
+
+  async function enableNotifications() {
+    if (typeof Notification === "undefined") { toast.error("Notifications not supported on this device"); return; }
+    const p = await Notification.requestPermission();
+    setPermission(p);
+    if (p === "granted") toast.success("Notifications enabled");
+  }
 
   async function submit() {
     if (!title || !when) return toast.error("Title and date required");
     try {
-      await add({ data: { title, kind, scheduledAt: new Date(when).toISOString(), notes: notes || undefined } });
-      setTitle(""); setWhen(""); setNotes(""); setOpen(false);
+      await add({ data: { title, kind, scheduledAt: new Date(when).toISOString(), notes: notes || undefined, recurrence, notify } });
+      setTitle(""); setWhen(""); setNotes(""); setRecurrence("none"); setOpen(false);
       qc.invalidateQueries({ queryKey: ["appts"] });
       toast.success("Reminder saved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
-  const items = data?.appointments ?? [];
-  const upcoming = items.filter((a: any) => !a.done);
+  function applyPreset(p: "kick" | "hydration" | "supplement") {
+    const now = new Date();
+    if (p === "kick") {
+      now.setHours(19, 0, 0, 0);
+      setTitle("Daily kick count"); setKind("kick"); setRecurrence("daily");
+    } else if (p === "hydration") {
+      now.setMinutes(0, 0, 0); now.setHours(now.getHours() + 1);
+      setTitle("Drink a glass of water"); setKind("hydration"); setRecurrence("hourly");
+    } else {
+      now.setHours(9, 0, 0, 0);
+      setTitle("Prenatal vitamin"); setKind("supplement"); setRecurrence("daily");
+    }
+    const tz = now.getTimezoneOffset();
+    const local = new Date(now.getTime() - tz * 60000).toISOString().slice(0, 16);
+    setWhen(local);
+    setOpen(true);
+  }
+
+  // Browser notifications: poll every 30s and notify on due reminders (per session)
+  useEffect(() => {
+    if (permission !== "granted") return;
+    const seen = new Set<string>();
+    const tick = () => {
+      const items = (data?.appointments ?? []) as any[];
+      const nowMs = Date.now();
+      for (const a of items) {
+        if (!a.notify || a.done) continue;
+        const base = new Date(a.scheduled_at).getTime();
+        let next = base;
+        if (a.recurrence === "hourly") {
+          const diff = nowMs - base;
+          if (diff > 0) next = base + Math.floor(diff / 3600000) * 3600000;
+        } else if (a.recurrence === "daily") {
+          const diff = nowMs - base;
+          if (diff > 0) next = base + Math.floor(diff / 86400000) * 86400000;
+        }
+        const key = `${a.id}:${next}`;
+        if (Math.abs(nowMs - next) < 30000 && !seen.has(key)) {
+          seen.add(key);
+          try { new Notification("Nurtura reminder", { body: a.title, tag: a.id }); } catch {}
+        }
+      }
+    };
+    tick();
+    const t = setInterval(tick, 30000);
+    return () => clearInterval(t);
+  }, [data, permission]);
+
+  const items = (data?.appointments ?? []) as any[];
+  const upcoming = items.filter((a) => !a.done);
 
   const kindIcon = (k: string) =>
-    k === "scan" ? Activity : k === "supplement" ? Heart : k === "hydration" ? Droplet : BellRing;
+    k === "scan" ? Activity : k === "supplement" ? Heart : k === "hydration" ? Droplet :
+    k === "kick" ? Footprints : k === "exercise" ? Activity : BellRing;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-ink/60">{upcoming.length} upcoming</p>
-        <button onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm text-cream">
-          <CalendarPlus className="size-4" /> Add
-        </button>
+        <div className="flex gap-2">
+          {permission !== "granted" && permission !== "unsupported" && (
+            <button onClick={enableNotifications} className="rounded-full bg-cream px-3 py-1.5 text-[11px] ring-1 ring-zinc-950/10">
+              Enable notifications
+            </button>
+          )}
+          <button onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm text-cream">
+            <CalendarPlus className="size-4" /> Add
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-lavender/50 p-3 ring-1 ring-zinc-950/5">
+        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/50 mb-2">Quick presets</p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => applyPreset("kick")} className="rounded-full bg-cream px-3 py-1.5 text-xs ring-1 ring-zinc-950/10">+ Daily kick count</button>
+          <button onClick={() => applyPreset("hydration")} className="rounded-full bg-cream px-3 py-1.5 text-xs ring-1 ring-zinc-950/10">+ Hourly hydration</button>
+          <button onClick={() => applyPreset("supplement")} className="rounded-full bg-cream px-3 py-1.5 text-xs ring-1 ring-zinc-950/10">+ Daily prenatal vitamin</button>
+        </div>
       </div>
 
       {open && (
@@ -261,10 +338,20 @@ function Reminders() {
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Title (e.g. 20-week scan)" className="w-full rounded-2xl bg-cream px-4 py-2.5 text-sm ring-1 ring-zinc-950/10 outline-none" />
           <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="w-full rounded-2xl bg-cream px-4 py-2.5 text-sm ring-1 ring-zinc-950/10 outline-none" />
           <div className="flex flex-wrap gap-2">
-            {(["appointment", "scan", "supplement", "hydration", "other"] as const).map((k) => (
+            {(["appointment", "scan", "supplement", "hydration", "kick", "exercise", "other"] as const).map((k) => (
               <button key={k} onClick={() => setKind(k)} className={`rounded-full px-3 py-1.5 text-xs capitalize ring-1 ${kind === k ? "bg-ink text-cream ring-ink" : "bg-cream ring-zinc-950/10"}`}>{k}</button>
             ))}
           </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="text-[11px] text-ink/50 self-center mr-1">Repeat:</span>
+            {(["none", "hourly", "daily", "weekly"] as const).map((r) => (
+              <button key={r} onClick={() => setRecurrence(r)} className={`rounded-full px-3 py-1 text-[11px] capitalize ring-1 ${recurrence === r ? "bg-ink text-cream ring-ink" : "bg-cream ring-zinc-950/10"}`}>{r}</button>
+            ))}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-ink/70">
+            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="size-4 accent-ink" />
+            Send browser notification at due time
+          </label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} placeholder="Notes (optional)" className="w-full rounded-2xl bg-cream px-4 py-2.5 text-sm ring-1 ring-zinc-950/10 outline-none" />
           <div className="flex gap-2">
             <button onClick={() => setOpen(false)} className="flex-1 rounded-full bg-cream px-4 py-2 text-sm ring-1 ring-zinc-950/10">Cancel</button>
@@ -274,7 +361,7 @@ function Reminders() {
       )}
 
       <ul className="space-y-2">
-        {items.map((a: any) => {
+        {items.map((a) => {
           const Icon = kindIcon(a.kind);
           const d = new Date(a.scheduled_at);
           return (
@@ -282,7 +369,11 @@ function Reminders() {
               <span className="size-9 rounded-full grid place-items-center bg-lavender/60"><Icon className="size-4 text-ink/70" /></span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{a.title}</p>
-                <p className="text-[11px] text-ink/50">{d.toLocaleString()} · {a.kind}</p>
+                <p className="text-[11px] text-ink/50">
+                  {d.toLocaleString()} · {a.kind}
+                  {a.recurrence && a.recurrence !== "none" && <> · repeats {a.recurrence}</>}
+                  {a.notify && <> · 🔔</>}
+                </p>
               </div>
               <button onClick={async () => { await toggle({ data: { id: a.id, done: !a.done } }); qc.invalidateQueries({ queryKey: ["appts"] }); }} className="rounded-full bg-cream px-3 py-1 text-[11px] ring-1 ring-zinc-950/10">
                 {a.done ? "Undo" : "Done"}
@@ -295,13 +386,14 @@ function Reminders() {
         })}
         {items.length === 0 && (
           <li className="rounded-2xl bg-lavender/40 p-5 text-center text-sm text-ink/60 ring-1 ring-zinc-950/5">
-            Add scans, checkups, supplements, or hydration reminders.
+            Use a preset above or add scans, checkups, supplements, or hydration reminders.
           </li>
         )}
       </ul>
     </div>
   );
 }
+
 
 /* ---------- Tracking (mood, symptom, sleep, weight) ---------- */
 
