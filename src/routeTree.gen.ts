@@ -27,6 +27,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCommunityRouteImport } from './routes/_app/community'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as ShareBirthPlanTokenRouteImport } from './routes/share.birth-plan.$token'
 import { Route as AppLearnSlugRouteImport } from './routes/_app/learn.$slug'
 import { Route as AppCommunitySlugRouteImport } from './routes/_app/community.$slug'
 
@@ -119,6 +120,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const ShareBirthPlanTokenRoute = ShareBirthPlanTokenRouteImport.update({
+  id: '/share/birth-plan/$token',
+  path: '/share/birth-plan/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppLearnSlugRoute = AppLearnSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/tracker': typeof AppTrackerRoute
   '/community/$slug': typeof AppCommunitySlugRoute
   '/learn/$slug': typeof AppLearnSlugRoute
+  '/share/birth-plan/$token': typeof ShareBirthPlanTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/tracker': typeof AppTrackerRoute
   '/community/$slug': typeof AppCommunitySlugRoute
   '/learn/$slug': typeof AppLearnSlugRoute
+  '/share/birth-plan/$token': typeof ShareBirthPlanTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/_app/tracker': typeof AppTrackerRoute
   '/_app/community/$slug': typeof AppCommunitySlugRoute
   '/_app/learn/$slug': typeof AppLearnSlugRoute
+  '/share/birth-plan/$token': typeof ShareBirthPlanTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/tracker'
     | '/community/$slug'
     | '/learn/$slug'
+    | '/share/birth-plan/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/tracker'
     | '/community/$slug'
     | '/learn/$slug'
+    | '/share/birth-plan/$token'
   id:
     | '__root__'
     | '/'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/_app/tracker'
     | '/_app/community/$slug'
     | '/_app/learn/$slug'
+    | '/share/birth-plan/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -268,6 +280,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
+  ShareBirthPlanTokenRoute: typeof ShareBirthPlanTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -398,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/share/birth-plan/$token': {
+      id: '/share/birth-plan/$token'
+      path: '/share/birth-plan/$token'
+      fullPath: '/share/birth-plan/$token'
+      preLoaderRoute: typeof ShareBirthPlanTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/learn/$slug': {
       id: '/_app/learn/$slug'
       path: '/$slug'
@@ -479,7 +499,18 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,
+  ShareBirthPlanTokenRoute: ShareBirthPlanTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
