@@ -35,6 +35,18 @@ function ageBand(m: number | null): string {
   return "young child (2+ years)";
 }
 
+function pregnancyWeeklySafety(week: number): string {
+  const tri = week < 14 ? 1 : week < 28 ? 2 : 3;
+  const common = "Seek urgent care for: heavy bleeding, severe/persistent headache, vision changes, sudden swelling of face/hands, severe abdominal pain, fever >38°C, or signs of dehydration.";
+  if (tri === 1) {
+    return `Trimester 1 (week ${week}): Some nausea, fatigue, and mild cramping are common. ${common} Also call your OB-GYN or midwife for: bleeding heavier than spotting, one-sided sharp pain (possible ectopic), or uncontrollable vomiting.`;
+  }
+  if (tri === 2) {
+    return `Trimester 2 (week ${week}): You should start feeling movement around 18–22 weeks. ${common} Contact your clinician if movement feels reduced once established, or if you have leaking fluid or regular tightenings.`;
+  }
+  return `Trimester 3 (week ${week}): Track fetal movements daily. ${common} Go to L&D / ER for: reduced fetal movement, regular contractions before 37 weeks, water breaking, or any bleeding. After 37 weeks, regular contractions 5 min apart for an hour usually means it's time to call.`;
+}
+
 async function buildPersonalContext(supabase: any, userId: string) {
   const [{ data: profile }, { data: babies }] = await Promise.all([
     supabase.from("profiles").select("parent_name, concerns, concerns_notes, support_level").eq("id", userId).maybeSingle(),
@@ -44,9 +56,11 @@ async function buildPersonalContext(supabase: any, userId: string) {
   const months = babyAgeMonths(baby);
   const parts: string[] = ["User context (use to tailor tone & examples; do not echo verbatim):"];
   if (profile?.parent_name) parts.push(`- Parent: ${profile.parent_name}`);
+  let pregnancyWeek: number | null = null;
   if (baby?.is_pregnancy && baby?.pregnancy_due_date) {
     const daysLeft = Math.round((new Date(baby.pregnancy_due_date).getTime() - Date.now()) / 86400000);
-    const week = Math.max(1, Math.min(40, 40 - Math.round(daysLeft / 7)));
+    const week = Math.max(1, Math.min(42, 40 - Math.round(daysLeft / 7)));
+    pregnancyWeek = week;
     const tri = week < 14 ? 1 : week < 28 ? 2 : 3;
     parts.push(`- PREGNANCY MODE: ~week ${week} (trimester ${tri}), ${daysLeft} days to due date. Prioritize antenatal guidance and pregnancy safety.`);
   } else if (baby?.name) {
@@ -55,6 +69,11 @@ async function buildPersonalContext(supabase: any, userId: string) {
   if (profile?.concerns?.length) parts.push(`- Top concerns: ${profile.concerns.join(", ")}`);
   if (profile?.support_level) parts.push(`- Self-reported support level (1=overwhelmed, 5=confident): ${profile.support_level}. Adjust warmth accordingly.`);
   if (profile?.concerns_notes) parts.push(`- Notes from parent: ${profile.concerns_notes}`);
+  if (pregnancyWeek !== null) {
+    parts.push("");
+    parts.push("MANDATORY for every pregnancy response: end with a short section titled exactly `Safety check` (markdown bold or heading), containing the week-specific red flags below verbatim or paraphrased, plus one line reminding the user this is educational and not a medical diagnosis. Do not skip this section, even for trivial questions.");
+    parts.push(`Week-specific guidance to include: ${pregnancyWeeklySafety(pregnancyWeek)}`);
+  }
   return parts.length > 1 ? parts.join("\n") : "";
 }
 

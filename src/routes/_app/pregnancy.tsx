@@ -883,11 +883,19 @@ function BirthPlanPanel() {
   }
 
   async function revoke() {
+    const ok = typeof window !== "undefined" && window.confirm(
+      "Disable this share link?\n\nAnyone who already has the link will immediately lose access. This action cannot be undone — generating a new link will create a different URL.",
+    );
+    if (!ok) return;
     try {
       await revokeShare();
+      const disabledAt = new Date().toISOString();
       setShareToken(null);
       qc.invalidateQueries({ queryKey: ["birth-plan"] });
-      toast.success("Link disabled");
+      console.info("[audit] birth_plan_share_revoked", { at: disabledAt });
+      toast.success("Link disabled", {
+        description: `Revoked at ${new Date(disabledAt).toLocaleString()} — the previous URL no longer works.`,
+      });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
