@@ -6,14 +6,17 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import {
   Activity, Baby, BellRing, BookOpen, CalendarPlus, ClipboardList, Download, Droplet,
-  Footprints, Heart, ListChecks, Moon, Plus, Scale, Smile, Stethoscope, Timer, Trash2,
+  Footprints, Heart, Link2, ListChecks, Moon, Plus, Scale, Share2, Smile, Sparkles, Stethoscope,
+  Timer, Trash2,
 } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { getMe } from "@/lib/profile.functions";
 import {
   addAppointment, addBagItem, addPregnancyLog, deleteAppointment, deleteBagItem,
-  getBirthPlan, listAppointments, listBagItems, listPregnancyLogs, saveBirthPlan,
-  toggleAppointmentDone, toggleBagItem,
+  generateBirthPlanShare, getBirthPlan, getSharedBirthPlan, listAppointments, listBagItems,
+  listPregnancyLogs, revokeBirthPlanShare, saveBirthPlan, toggleAppointmentDone, toggleBagItem,
 } from "@/lib/pregnancy.functions";
+
 
 export const Route = createFileRoute("/_app/pregnancy")({
   head: () => ({ meta: [{ title: "Pregnancy — Nurtura" }] }),
