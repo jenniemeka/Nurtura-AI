@@ -35,19 +35,80 @@ function ageBand(m: number | null): string {
   return "young child (2+ years)";
 }
 
-function pregnancyWeeklySafety(week: number): string {
-  const tri = week < 14 ? 1 : week < 28 ? 2 : 3;
-  const common = "Seek urgent care for: heavy bleeding, severe/persistent headache, vision changes, sudden swelling of face/hands, severe abdominal pain, fever >38°C, or signs of dehydration.";
+export type ClinicianGuidance = {
+  week: number;
+  trimester: 1 | 2 | 3;
+  callClinician: string[];
+  goToER: string[];
+  reminder: string;
+};
+
+export function clinicianGuidanceFor(week: number): ClinicianGuidance {
+  const tri = (week < 14 ? 1 : week < 28 ? 2 : 3) as 1 | 2 | 3;
+  const commonER = [
+    "Heavy vaginal bleeding (soaking a pad in an hour)",
+    "Severe or persistent headache with vision changes",
+    "Sudden swelling of face or hands, or sharp upper-belly pain",
+    "Fever above 38°C / 100.4°F that won't come down",
+    "Trouble breathing, chest pain, or fainting",
+  ];
   if (tri === 1) {
-    return `Trimester 1 (week ${week}): Some nausea, fatigue, and mild cramping are common. ${common} Also call your OB-GYN or midwife for: bleeding heavier than spotting, one-sided sharp pain (possible ectopic), or uncontrollable vomiting.`;
+    return {
+      week,
+      trimester: 1,
+      callClinician: [
+        "Spotting that turns into bleeding heavier than a light period",
+        "One-sided sharp pelvic pain (possible ectopic pregnancy)",
+        "Vomiting so often you can't keep fluids down for 24 hours",
+        "Burning when you pee or new pelvic pressure",
+      ],
+      goToER: commonER,
+      reminder: "Educational guidance, not a medical diagnosis. When in doubt, call your OB-GYN or midwife.",
+    };
   }
   if (tri === 2) {
-    return `Trimester 2 (week ${week}): You should start feeling movement around 18–22 weeks. ${common} Contact your clinician if movement feels reduced once established, or if you have leaking fluid or regular tightenings.`;
+    return {
+      week,
+      trimester: 2,
+      callClinician: [
+        "Reduced fetal movement once you've started feeling regular kicks (usually 18–22 weeks)",
+        "Leaking fluid from the vagina",
+        "Regular tightenings or cramping before 37 weeks",
+        "Any new bleeding, even light",
+      ],
+      goToER: commonER,
+      reminder: "Educational guidance, not a medical diagnosis. Trust your instincts — call your clinician any time something feels off.",
+    };
   }
-  return `Trimester 3 (week ${week}): Track fetal movements daily. ${common} Go to L&D / ER for: reduced fetal movement, regular contractions before 37 weeks, water breaking, or any bleeding. After 37 weeks, regular contractions 5 min apart for an hour usually means it's time to call.`;
+  return {
+    week,
+    trimester: 3,
+    callClinician: [
+      week < 37
+        ? "Regular contractions, pelvic pressure, or low back pain before 37 weeks (preterm labor signs)"
+        : "Regular contractions about 5 minutes apart for an hour (likely labor — call L&D)",
+      "Noticeable drop in fetal movements during a kick count",
+      "Sudden gush or steady trickle of fluid (possible water breaking)",
+    ],
+    goToER: [
+      ...commonER,
+      "Any vaginal bleeding",
+      "A clear drop in fetal movement that doesn't recover after a snack, drink, and 30 minutes of focus",
+    ],
+    reminder: "Educational guidance, not a medical diagnosis. After 37 weeks, your L&D team would rather hear from you twice than not at all.",
+  };
 }
 
-async function buildPersonalContext(supabase: any, userId: string) {
+function safetyToPrompt(g: ClinicianGuidance): string {
+  return [
+    `Week ${g.week} (trimester ${g.trimester}) clinician guidance to attach to every response:`,
+    `- Call your clinician for: ${g.callClinician.join("; ")}.`,
+    `- Go to L&D / ER for: ${g.goToER.join("; ")}.`,
+    `- Reminder: ${g.reminder}`,
+  ].join("\n");
+}
+
+async function buildPersonalContext(supabase: any, userId: string): Promise<{ system: string; guidance: ClinicianGuidance | null }> {
   const [{ data: profile }, { data: babies }] = await Promise.all([
     supabase.from("profiles").select("parent_name, concerns, concerns_notes, support_level").eq("id", userId).maybeSingle(),
     supabase.from("babies").select("name, is_pregnancy, birth_date, pregnancy_due_date").eq("user_id", userId).order("created_at").limit(1),
@@ -56,26 +117,26 @@ async function buildPersonalContext(supabase: any, userId: string) {
   const months = babyAgeMonths(baby);
   const parts: string[] = ["User context (use to tailor tone & examples; do not echo verbatim):"];
   if (profile?.parent_name) parts.push(`- Parent: ${profile.parent_name}`);
-  let pregnancyWeek: number | null = null;
+  let guidance: ClinicianGuidance | null = null;
   if (baby?.is_pregnancy && baby?.pregnancy_due_date) {
     const daysLeft = Math.round((new Date(baby.pregnancy_due_date).getTime() - Date.now()) / 86400000);
     const week = Math.max(1, Math.min(42, 40 - Math.round(daysLeft / 7)));
-    pregnancyWeek = week;
-    const tri = week < 14 ? 1 : week < 28 ? 2 : 3;
-    parts.push(`- PREGNANCY MODE: ~week ${week} (trimester ${tri}), ${daysLeft} days to due date. Prioritize antenatal guidance and pregnancy safety.`);
+    guidance = clinicianGuidanceFor(week);
+    parts.push(`- PREGNANCY MODE: ~week ${week} (trimester ${guidance.trimester}), ${daysLeft} days to due date. Prioritize antenatal guidance and pregnancy safety.`);
   } else if (baby?.name) {
     parts.push(`- Baby: ${baby.name} — stage: ${ageBand(months)}${months !== null && months >= 0 ? ` (~${Math.round(months)} months)` : ""}`);
   }
   if (profile?.concerns?.length) parts.push(`- Top concerns: ${profile.concerns.join(", ")}`);
   if (profile?.support_level) parts.push(`- Self-reported support level (1=overwhelmed, 5=confident): ${profile.support_level}. Adjust warmth accordingly.`);
   if (profile?.concerns_notes) parts.push(`- Notes from parent: ${profile.concerns_notes}`);
-  if (pregnancyWeek !== null) {
+  if (guidance) {
     parts.push("");
-    parts.push("MANDATORY for every pregnancy response: end with a short section titled exactly `Safety check` (markdown bold or heading), containing the week-specific red flags below verbatim or paraphrased, plus one line reminding the user this is educational and not a medical diagnosis. Do not skip this section, even for trivial questions.");
-    parts.push(`Week-specific guidance to include: ${pregnancyWeeklySafety(pregnancyWeek)}`);
+    parts.push("MANDATORY for every pregnancy response: end with a short `Safety check` section paraphrasing the week-specific guidance below, and remind the user this is educational, not a medical diagnosis. The app will also render a structured clinician guidance card alongside your response.");
+    parts.push(safetyToPrompt(guidance));
   }
-  return parts.length > 1 ? parts.join("\n") : "";
+  return { system: parts.length > 1 ? parts.join("\n") : "", guidance };
 }
+
 
 export const askAi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
