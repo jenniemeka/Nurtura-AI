@@ -6,14 +6,18 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import {
   Activity, Baby, BellRing, BookOpen, CalendarPlus, ClipboardList, Download, Droplet,
-  Footprints, Heart, ListChecks, Moon, Plus, Scale, Smile, Stethoscope, Timer, Trash2,
+  Footprints, Heart, Link2, ListChecks, Moon, Plus, Scale, Share2, Smile, Sparkles, Stethoscope,
+  Timer, Trash2,
 } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { getMe } from "@/lib/profile.functions";
 import {
   addAppointment, addBagItem, addPregnancyLog, deleteAppointment, deleteBagItem,
-  getBirthPlan, listAppointments, listBagItems, listPregnancyLogs, saveBirthPlan,
-  toggleAppointmentDone, toggleBagItem,
+  generateBirthPlanShare, getBirthPlan, listAppointments, listBagItems,
+  listPregnancyLogs, revokeBirthPlanShare, saveBirthPlan, toggleAppointmentDone, toggleBagItem,
 } from "@/lib/pregnancy.functions";
+
+
 
 export const Route = createFileRoute("/_app/pregnancy")({
   head: () => ({ meta: [{ title: "Pregnancy — Nurtura" }] }),
@@ -173,18 +177,32 @@ function Overview({ week, trimester }: { week: number | null; trimester: number 
         </section>
       )}
 
-      <section className="grid grid-cols-2 gap-3">
-        <Link to="/ai" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
-          <Stethoscope className="size-5 text-ink/70" />
-          <p className="mt-2 font-medium text-sm">Ask Nurtura AI</p>
-          <p className="text-xs text-ink/50 mt-0.5">Pregnancy-safe answers.</p>
+      <section className="rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-4 text-ink/60" />
+          <p className="text-sm font-medium">Ask your pregnancy assistant</p>
+        </div>
+        <p className="mt-1 text-xs text-ink/60">
+          Tuned to week {week ?? "—"} · trimester {trimester ?? "—"}. Safe, non-diagnostic guidance.
+        </p>
+        <Link to="/ai" className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs text-cream">
+          <Stethoscope className="size-3.5" /> Open assistant
         </Link>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
         <Link to="/reels" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
           <BookOpen className="size-5 text-ink/70" />
           <p className="mt-2 font-medium text-sm">Antenatal videos</p>
           <p className="text-xs text-ink/50 mt-0.5">Care, nutrition, exercises.</p>
         </Link>
+        <Link to="/learn" className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
+          <BookOpen className="size-5 text-ink/70" />
+          <p className="mt-2 font-medium text-sm">Articles</p>
+          <p className="text-xs text-ink/50 mt-0.5">Curated reads.</p>
+        </Link>
       </section>
+
 
       <section className="rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
         <p className="text-xs uppercase tracking-[0.15em] text-ink/40">This trimester</p>
@@ -223,33 +241,110 @@ function Reminders() {
 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<"appointment" | "scan" | "supplement" | "hydration" | "other">("appointment");
+  const [kind, setKind] = useState<"appointment" | "scan" | "supplement" | "hydration" | "other" | "kick" | "exercise">("appointment");
   const [when, setWhen] = useState("");
   const [notes, setNotes] = useState("");
+  const [recurrence, setRecurrence] = useState<"none" | "hourly" | "daily" | "weekly">("none");
+  const [notify, setNotify] = useState(true);
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported",
+  );
+
+  async function enableNotifications() {
+    if (typeof Notification === "undefined") { toast.error("Notifications not supported on this device"); return; }
+    const p = await Notification.requestPermission();
+    setPermission(p);
+    if (p === "granted") toast.success("Notifications enabled");
+  }
 
   async function submit() {
     if (!title || !when) return toast.error("Title and date required");
     try {
-      await add({ data: { title, kind, scheduledAt: new Date(when).toISOString(), notes: notes || undefined } });
-      setTitle(""); setWhen(""); setNotes(""); setOpen(false);
+      await add({ data: { title, kind, scheduledAt: new Date(when).toISOString(), notes: notes || undefined, recurrence, notify } });
+      setTitle(""); setWhen(""); setNotes(""); setRecurrence("none"); setOpen(false);
       qc.invalidateQueries({ queryKey: ["appts"] });
       toast.success("Reminder saved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
-  const items = data?.appointments ?? [];
-  const upcoming = items.filter((a: any) => !a.done);
+  function applyPreset(p: "kick" | "hydration" | "supplement") {
+    const now = new Date();
+    if (p === "kick") {
+      now.setHours(19, 0, 0, 0);
+      setTitle("Daily kick count"); setKind("kick"); setRecurrence("daily");
+    } else if (p === "hydration") {
+      now.setMinutes(0, 0, 0); now.setHours(now.getHours() + 1);
+      setTitle("Drink a glass of water"); setKind("hydration"); setRecurrence("hourly");
+    } else {
+      now.setHours(9, 0, 0, 0);
+      setTitle("Prenatal vitamin"); setKind("supplement"); setRecurrence("daily");
+    }
+    const tz = now.getTimezoneOffset();
+    const local = new Date(now.getTime() - tz * 60000).toISOString().slice(0, 16);
+    setWhen(local);
+    setOpen(true);
+  }
+
+  // Browser notifications: poll every 30s and notify on due reminders (per session)
+  useEffect(() => {
+    if (permission !== "granted") return;
+    const seen = new Set<string>();
+    const tick = () => {
+      const items = (data?.appointments ?? []) as any[];
+      const nowMs = Date.now();
+      for (const a of items) {
+        if (!a.notify || a.done) continue;
+        const base = new Date(a.scheduled_at).getTime();
+        let next = base;
+        if (a.recurrence === "hourly") {
+          const diff = nowMs - base;
+          if (diff > 0) next = base + Math.floor(diff / 3600000) * 3600000;
+        } else if (a.recurrence === "daily") {
+          const diff = nowMs - base;
+          if (diff > 0) next = base + Math.floor(diff / 86400000) * 86400000;
+        }
+        const key = `${a.id}:${next}`;
+        if (Math.abs(nowMs - next) < 30000 && !seen.has(key)) {
+          seen.add(key);
+          try { new Notification("Nurtura reminder", { body: a.title, tag: a.id }); } catch {}
+        }
+      }
+    };
+    tick();
+    const t = setInterval(tick, 30000);
+    return () => clearInterval(t);
+  }, [data, permission]);
+
+  const items = (data?.appointments ?? []) as any[];
+  const upcoming = items.filter((a) => !a.done);
 
   const kindIcon = (k: string) =>
-    k === "scan" ? Activity : k === "supplement" ? Heart : k === "hydration" ? Droplet : BellRing;
+    k === "scan" ? Activity : k === "supplement" ? Heart : k === "hydration" ? Droplet :
+    k === "kick" ? Footprints : k === "exercise" ? Activity : BellRing;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-ink/60">{upcoming.length} upcoming</p>
-        <button onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm text-cream">
-          <CalendarPlus className="size-4" /> Add
-        </button>
+        <div className="flex gap-2">
+          {permission !== "granted" && permission !== "unsupported" && (
+            <button onClick={enableNotifications} className="rounded-full bg-cream px-3 py-1.5 text-[11px] ring-1 ring-zinc-950/10">
+              Enable notifications
+            </button>
+          )}
+          <button onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm text-cream">
+            <CalendarPlus className="size-4" /> Add
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-lavender/50 p-3 ring-1 ring-zinc-950/5">
+        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/50 mb-2">Quick presets</p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => applyPreset("kick")} className="rounded-full bg-cream px-3 py-1.5 text-xs ring-1 ring-zinc-950/10">+ Daily kick count</button>
+          <button onClick={() => applyPreset("hydration")} className="rounded-full bg-cream px-3 py-1.5 text-xs ring-1 ring-zinc-950/10">+ Hourly hydration</button>
+          <button onClick={() => applyPreset("supplement")} className="rounded-full bg-cream px-3 py-1.5 text-xs ring-1 ring-zinc-950/10">+ Daily prenatal vitamin</button>
+        </div>
       </div>
 
       {open && (
@@ -257,10 +352,20 @@ function Reminders() {
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Title (e.g. 20-week scan)" className="w-full rounded-2xl bg-cream px-4 py-2.5 text-sm ring-1 ring-zinc-950/10 outline-none" />
           <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="w-full rounded-2xl bg-cream px-4 py-2.5 text-sm ring-1 ring-zinc-950/10 outline-none" />
           <div className="flex flex-wrap gap-2">
-            {(["appointment", "scan", "supplement", "hydration", "other"] as const).map((k) => (
+            {(["appointment", "scan", "supplement", "hydration", "kick", "exercise", "other"] as const).map((k) => (
               <button key={k} onClick={() => setKind(k)} className={`rounded-full px-3 py-1.5 text-xs capitalize ring-1 ${kind === k ? "bg-ink text-cream ring-ink" : "bg-cream ring-zinc-950/10"}`}>{k}</button>
             ))}
           </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="text-[11px] text-ink/50 self-center mr-1">Repeat:</span>
+            {(["none", "hourly", "daily", "weekly"] as const).map((r) => (
+              <button key={r} onClick={() => setRecurrence(r)} className={`rounded-full px-3 py-1 text-[11px] capitalize ring-1 ${recurrence === r ? "bg-ink text-cream ring-ink" : "bg-cream ring-zinc-950/10"}`}>{r}</button>
+            ))}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-ink/70">
+            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="size-4 accent-ink" />
+            Send browser notification at due time
+          </label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={500} placeholder="Notes (optional)" className="w-full rounded-2xl bg-cream px-4 py-2.5 text-sm ring-1 ring-zinc-950/10 outline-none" />
           <div className="flex gap-2">
             <button onClick={() => setOpen(false)} className="flex-1 rounded-full bg-cream px-4 py-2 text-sm ring-1 ring-zinc-950/10">Cancel</button>
@@ -270,7 +375,7 @@ function Reminders() {
       )}
 
       <ul className="space-y-2">
-        {items.map((a: any) => {
+        {items.map((a) => {
           const Icon = kindIcon(a.kind);
           const d = new Date(a.scheduled_at);
           return (
@@ -278,7 +383,11 @@ function Reminders() {
               <span className="size-9 rounded-full grid place-items-center bg-lavender/60"><Icon className="size-4 text-ink/70" /></span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{a.title}</p>
-                <p className="text-[11px] text-ink/50">{d.toLocaleString()} · {a.kind}</p>
+                <p className="text-[11px] text-ink/50">
+                  {d.toLocaleString()} · {a.kind}
+                  {a.recurrence && a.recurrence !== "none" && <> · repeats {a.recurrence}</>}
+                  {a.notify && <> · 🔔</>}
+                </p>
               </div>
               <button onClick={async () => { await toggle({ data: { id: a.id, done: !a.done } }); qc.invalidateQueries({ queryKey: ["appts"] }); }} className="rounded-full bg-cream px-3 py-1 text-[11px] ring-1 ring-zinc-950/10">
                 {a.done ? "Undo" : "Done"}
@@ -291,13 +400,14 @@ function Reminders() {
         })}
         {items.length === 0 && (
           <li className="rounded-2xl bg-lavender/40 p-5 text-center text-sm text-ink/60 ring-1 ring-zinc-950/5">
-            Add scans, checkups, supplements, or hydration reminders.
+            Use a preset above or add scans, checkups, supplements, or hydration reminders.
           </li>
         )}
       </ul>
     </div>
   );
 }
+
 
 /* ---------- Tracking (mood, symptom, sleep, weight) ---------- */
 
@@ -388,9 +498,96 @@ function TrackingPanel() {
           {(data?.logs ?? []).length === 0 && <li className="text-xs text-ink/50">No logs yet.</li>}
         </ul>
       </section>
+
+      <TrendsCharts />
     </div>
   );
 }
+
+function TrendsCharts() {
+  const list = useServerFn(listPregnancyLogs);
+  const { data: kicksData } = useQuery({
+    queryKey: ["preg-logs", "kick_session", "trends"],
+    queryFn: () => list({ data: { kind: "kick_session", limit: 60 } }),
+  });
+  const { data: contData } = useQuery({
+    queryKey: ["preg-logs", "contraction_session", "trends"],
+    queryFn: () => list({ data: { kind: "contraction_session", limit: 60 } }),
+  });
+
+  const kicksByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    (kicksData?.logs ?? []).forEach((l: any) => {
+      const day = new Date(l.logged_at).toISOString().slice(0, 10);
+      map.set(day, (map.get(day) ?? 0) + (l.data?.count ?? 0));
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([day, count]) => ({ day: day.slice(5), count }));
+  }, [kicksData]);
+
+  const contractionsByDay = useMemo(() => {
+    const map = new Map<string, { count: number; avgDur: number; n: number }>();
+    (contData?.logs ?? []).forEach((l: any) => {
+      const day = new Date(l.logged_at).toISOString().slice(0, 10);
+      const cur = map.get(day) ?? { count: 0, avgDur: 0, n: 0 };
+      const c = l.data?.contractions?.length ?? 0;
+      const dur = l.data?.avgDur ?? 0;
+      map.set(day, { count: cur.count + c, avgDur: cur.avgDur + dur, n: cur.n + 1 });
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([day, v]) => ({ day: day.slice(5), count: v.count, avgDur: v.n ? Math.round(v.avgDur / v.n) : 0 }));
+  }, [contData]);
+
+  if (!kicksByDay.length && !contractionsByDay.length) return null;
+
+  return (
+    <section className="space-y-3">
+      <p className="text-xs uppercase tracking-[0.15em] text-ink/40">Trends</p>
+
+      {kicksByDay.length > 0 && (
+        <div className="rounded-3xl bg-card p-4 ring-1 ring-zinc-950/5">
+          <p className="text-sm font-medium">Kicks per day</p>
+          <p className="text-[11px] text-ink/50 mb-2">Last 14 days with activity</p>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={kicksByDay} margin={{ top: 6, right: 6, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                <Bar dataKey="count" fill="#1f1d1b" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {contractionsByDay.length > 0 && (
+        <div className="rounded-3xl bg-card p-4 ring-1 ring-zinc-950/5">
+          <p className="text-sm font-medium">Contractions per day</p>
+          <p className="text-[11px] text-ink/50 mb-2">Count and average duration (sec)</p>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={contractionsByDay} margin={{ top: 6, right: 6, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                <Line type="monotone" dataKey="count" stroke="#1f1d1b" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="avgDur" stroke="#a78bfa" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function summarizeLog(l: any) {
   const d = l.data || {};
@@ -660,8 +857,49 @@ function BirthPlanPanel() {
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["birth-plan"], queryFn: () => get() });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const genShare = useServerFn(generateBirthPlanShare);
+  const revokeShare = useServerFn(revokeBirthPlanShare);
   const [prefs, setPrefs] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
+  const [shareToken, setShareToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setShareToken((data?.plan as any)?.share_token ?? null);
+  }, [data]);
+
+  async function createShareLink() {
+    if (!BIRTH_QS.some((q) => prefs[q.key]) && !notes.trim()) {
+      toast.error("Save some preferences first"); return;
+    }
+    try {
+      await save({ data: { preferences: { choices: prefs, notes } } });
+      const r = await genShare();
+      setShareToken(r.token);
+      qc.invalidateQueries({ queryKey: ["birth-plan"] });
+      const url = `${window.location.origin}/share/birth-plan/${r.token}`;
+      try { await navigator.clipboard?.writeText(url); toast.success("Share link copied"); }
+      catch { toast.success("Share link ready"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  }
+
+  async function revoke() {
+    try {
+      await revokeShare();
+      setShareToken(null);
+      qc.invalidateQueries({ queryKey: ["birth-plan"] });
+      toast.success("Link disabled");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  }
+
+  function copyLink() {
+    if (!shareToken) return;
+    const url = `${window.location.origin}/share/birth-plan/${shareToken}`;
+    navigator.clipboard?.writeText(url).then(
+      () => toast.success("Copied"),
+      () => toast.error("Copy failed"),
+    );
+  }
+
 
   useEffect(() => {
     if (data?.plan) {
@@ -783,6 +1021,32 @@ function BirthPlanPanel() {
         </section>
       )}
 
+      <section className="rounded-2xl bg-card p-4 ring-1 ring-zinc-950/5">
+        <div className="flex items-center gap-2">
+          <Share2 className="size-4 text-ink/60" />
+          <p className="text-sm font-medium">Share your plan</p>
+        </div>
+        {shareToken ? (
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center gap-2 rounded-full bg-cream px-3 py-2 ring-1 ring-zinc-950/10">
+              <Link2 className="size-3.5 text-ink/50 shrink-0" />
+              <p className="flex-1 truncate text-[11px] text-ink/70">
+                {typeof window !== "undefined" ? `${window.location.origin}/share/birth-plan/${shareToken}` : ""}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={copyLink} className="flex-1 rounded-full bg-ink px-3 py-2 text-xs text-cream">Copy link</button>
+              <button onClick={revoke} className="flex-1 rounded-full bg-cream px-3 py-2 text-xs ring-1 ring-zinc-950/10">Disable link</button>
+            </div>
+            <p className="text-[10px] text-ink/40">Anyone with this link can view your plan. Disable any time.</p>
+          </div>
+        ) : (
+          <button onClick={createShareLink} className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs text-cream">
+            <Share2 className="size-3.5" /> Generate share link
+          </button>
+        )}
+      </section>
+
       <div className="flex gap-2">
         <button onClick={persist} className="flex-1 rounded-full bg-ink px-5 py-3 text-sm text-cream">Save</button>
         <button onClick={exportPDF} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-cream px-5 py-3 text-sm ring-1 ring-zinc-950/10">
@@ -792,3 +1056,4 @@ function BirthPlanPanel() {
     </div>
   );
 }
+

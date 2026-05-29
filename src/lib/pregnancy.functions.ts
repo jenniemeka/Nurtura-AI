@@ -1,16 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
 
 /* ---------- Appointments / reminders ---------- */
 
 const ApptSchema = z.object({
   title: z.string().trim().min(1).max(120),
   notes: z.string().trim().max(500).optional(),
-  kind: z.enum(["appointment", "scan", "supplement", "hydration", "other"]).default("appointment"),
+  kind: z.enum(["appointment", "scan", "supplement", "hydration", "other", "kick", "exercise"]).default("appointment"),
   scheduledAt: z.string().min(1),
   reminderMinutes: z.number().int().min(0).max(10080).optional(),
+  recurrence: z.enum(["none", "daily", "weekly", "hourly"]).default("none"),
+  notify: z.boolean().default(true),
 });
+
 
 export const listAppointments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -37,7 +42,10 @@ export const addAppointment = createServerFn({ method: "POST" })
       kind: data.kind,
       scheduled_at: data.scheduledAt,
       reminder_minutes: data.reminderMinutes ?? 60,
+      recurrence: data.recurrence,
+      notify: data.notify,
     });
+
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -225,3 +233,60 @@ export const saveBirthPlan = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ---------- Birth plan sharing ---------- */
+
+function genToken() {
+  const a = new Uint8Array(18);
+  crypto.getRandomValues(a);
+  return Array.from(a, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 24);
+}
+
+export const generateBirthPlanShare = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const token = genToken();
+    const { error } = await context.supabase.from("birth_plans").upsert(
+      {
+        user_id: context.userId,
+        share_token: token,
+        shared_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { token };
+  });
+
+export const revokeBirthPlanShare = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { error } = await context.supabase
+      .from("birth_plans")
+      .update({ share_token: null, shared_at: null, updated_at: new Date().toISOString() })
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getSharedBirthPlan = createServerFn({ method: "POST" })
+  .inputValidator((i: unknown) => z.object({ token: z.string().min(8).max(64) }).parse(i))
+  .handler(async ({ data }) => {
+    const { data: plan } = await supabaseAdmin
+      .from("birth_plans")
+      .select("preferences, updated_at, user_id")
+      .eq("share_token", data.token)
+      .maybeSingle();
+    if (!plan) return { plan: null, parentName: null, dueDate: null };
+    const { data: prof } = await supabaseAdmin
+      .from("profiles").select("parent_name").eq("id", plan.user_id).maybeSingle();
+    const { data: babies } = await supabaseAdmin
+      .from("babies").select("pregnancy_due_date").eq("user_id", plan.user_id).limit(1);
+    return {
+      plan: { preferences: plan.preferences, updated_at: plan.updated_at },
+      parentName: prof?.parent_name ?? null,
+      dueDate: babies?.[0]?.pregnancy_due_date ?? null,
+    };
+  });
+
