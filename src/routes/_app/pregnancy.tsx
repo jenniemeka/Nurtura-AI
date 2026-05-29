@@ -857,8 +857,49 @@ function BirthPlanPanel() {
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["birth-plan"], queryFn: () => get() });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const genShare = useServerFn(generateBirthPlanShare);
+  const revokeShare = useServerFn(revokeBirthPlanShare);
   const [prefs, setPrefs] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
+  const [shareToken, setShareToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setShareToken((data?.plan as any)?.share_token ?? null);
+  }, [data]);
+
+  async function createShareLink() {
+    if (!BIRTH_QS.some((q) => prefs[q.key]) && !notes.trim()) {
+      toast.error("Save some preferences first"); return;
+    }
+    try {
+      await save({ data: { preferences: { choices: prefs, notes } } });
+      const r = await genShare();
+      setShareToken(r.token);
+      qc.invalidateQueries({ queryKey: ["birth-plan"] });
+      const url = `${window.location.origin}/share/birth-plan/${r.token}`;
+      try { await navigator.clipboard?.writeText(url); toast.success("Share link copied"); }
+      catch { toast.success("Share link ready"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  }
+
+  async function revoke() {
+    try {
+      await revokeShare();
+      setShareToken(null);
+      qc.invalidateQueries({ queryKey: ["birth-plan"] });
+      toast.success("Link disabled");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+  }
+
+  function copyLink() {
+    if (!shareToken) return;
+    const url = `${window.location.origin}/share/birth-plan/${shareToken}`;
+    navigator.clipboard?.writeText(url).then(
+      () => toast.success("Copied"),
+      () => toast.error("Copy failed"),
+    );
+  }
+
 
   useEffect(() => {
     if (data?.plan) {
