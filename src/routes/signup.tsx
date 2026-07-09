@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
-import { AuthShell, Input, Divider } from "./login";
+import { AuthShell, Input, Divider } from "@/components/auth-shell";
 import { explainAuthError, signupVerificationHint, type AuthHint } from "@/lib/auth-errors";
 import { AuthAlert } from "@/components/auth-alert";
 

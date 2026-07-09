@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { completeOnboarding } from "@/lib/profile.functions";
-import { AuthShell, Input } from "./login";
+import { AuthShell, Input } from "@/components/auth-shell";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Welcome — Nurtura" }] }),
