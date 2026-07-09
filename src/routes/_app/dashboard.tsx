@@ -89,6 +89,8 @@ function Dashboard() {
         )}
       </div>
 
+      <SummaryCard baby={baby} w={w} concerns={concerns} />
+
       {isPregnant ? <PregnancyHome babyName={baby?.name ?? "baby"} w={w} concerns={concerns} />
                   : <ParentHome concerns={concerns} />}
     </div>
