@@ -122,8 +122,13 @@ function Onboarding() {
     }
   }
 
+  if (!ready) {
+    return <AuthShell title="Loading…" sub="One moment while we set things up."><div className="h-8" /></AuthShell>;
+  }
+
   return (
     <AuthShell title="Let's set things up" sub={`Step ${step + 1} of 3`}>
+
       {step === 0 && (
         <div className="space-y-3">
           <Input placeholder="Your name" value={parentName} onChange={(e) => setParentName(e.target.value)} maxLength={80} />
