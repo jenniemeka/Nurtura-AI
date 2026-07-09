@@ -31,9 +31,9 @@ function monthsAgoToDate(months: number) {
 }
 
 function Onboarding() {
-  const { user, loading } = useAuth();
   const nav = useNavigate();
   const onboard = useServerFn(completeOnboarding);
+  const [ready, setReady] = useState(false);
 
   const [step, setStep] = useState(0);
   const [parentName, setParentName] = useState("");
@@ -46,9 +46,43 @@ function Onboarding() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Wait for session (auth may still be persisting right after signup),
+  // then send already-onboarded users straight to the dashboard.
   useEffect(() => {
-    if (!loading && !user) nav({ to: "/login" });
-  }, [loading, user, nav]);
+    let cancelled = false;
+    async function resolve(userId: string | null) {
+      if (cancelled) return;
+      if (!userId) {
+        nav({ to: "/login", replace: true });
+        return;
+      }
+      const { data } = await supabase.from("profiles").select("onboarded, parent_name").eq("id", userId).maybeSingle();
+      if (cancelled) return;
+      if (data?.onboarded) {
+        nav({ to: "/dashboard", replace: true });
+        return;
+      }
+      if (data?.parent_name) setParentName(data.parent_name);
+      setReady(true);
+    }
+
+    supabase.auth.getSession().then(({ data }) => resolve(data.session?.user.id ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) resolve(session.user.id);
+    });
+    // Give the session up to ~2s to appear before bouncing to /login.
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session && !cancelled) nav({ to: "/login", replace: true });
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
+  }, [nav]);
+
 
   const effectiveDate = useMemo(() => {
     if (date) return date;
