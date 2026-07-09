@@ -6,6 +6,7 @@ import { lovable } from "@/integrations/lovable";
 import { explainAuthError, type AuthHint } from "@/lib/auth-errors";
 import { AuthAlert } from "@/components/auth-alert";
 import { AuthShell, Divider, Input } from "@/components/auth-shell";
+import { resolvePostAuthRoute } from "@/lib/post-auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Log in — Nurtura" }, { name: "description", content: "Welcome back to Nurtura." }] }),
@@ -25,13 +26,15 @@ function Login() {
     e.preventDefault();
     setLoading(true);
     setHint(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      setHint(explainAuthError(error.message, "login"));
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) {
+      setLoading(false);
+      setHint(explainAuthError(error?.message ?? "Login failed", "login"));
       return;
     }
-    nav({ to: "/dashboard" });
+    const to = await resolvePostAuthRoute(data.user.id);
+    setLoading(false);
+    nav({ to, replace: true });
   }
 
   async function google() {
@@ -44,7 +47,10 @@ function Login() {
       toast.error(r.error.message);
       return;
     }
-    if (!r?.redirected) nav({ to: "/dashboard" });
+    if (!r?.redirected) {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) nav({ to: await resolvePostAuthRoute(data.user.id), replace: true });
+    }
   }
 
   return (
@@ -57,6 +63,11 @@ function Login() {
       <form onSubmit={onSubmit} className="space-y-3">
         <Input disabled={busy} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <Input disabled={busy} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+        <div className="flex justify-end">
+          <Link to="/forgot-password" className="text-xs text-ink/60 underline underline-offset-4 hover:text-ink">
+            Forgot password?
+          </Link>
+        </div>
         <button disabled={busy} className="w-full rounded-full bg-ink px-5 py-3 text-sm font-medium text-cream disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? "Signing in…" : "Log in"}
         </button>
