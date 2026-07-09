@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   Sparkles, Moon, Apple, Syringe, ArrowRight, Baby, Stethoscope, ListChecks,
-  Footprints, Timer, Heart, BookOpen, CalendarPlus,
+  Footprints, Timer, Heart, BookOpen, CalendarPlus, CheckCircle2,
 } from "lucide-react";
 import { getMe } from "@/lib/profile.functions";
 
@@ -88,6 +88,8 @@ function Dashboard() {
           </p>
         )}
       </div>
+
+      <SummaryCard baby={baby} w={w} concerns={concerns} />
 
       {isPregnant ? <PregnancyHome babyName={baby?.name ?? "baby"} w={w} concerns={concerns} />
                   : <ParentHome concerns={concerns} />}
@@ -289,3 +291,81 @@ function ConcernsCard({ concerns }: { concerns: string[] }) {
     </section>
   );
 }
+
+type BabyRow = {
+  name: string;
+  is_pregnancy: boolean;
+  birth_date: string | null;
+  pregnancy_due_date: string | null;
+};
+
+function SummaryCard({
+  baby,
+  w,
+  concerns,
+}: {
+  baby?: BabyRow;
+  w: ReturnType<typeof weeksFromDue>;
+  concerns: string[];
+}) {
+  if (!baby) return null;
+  const isPreg = !!baby.is_pregnancy;
+  const stageLabel = isPreg ? "Pregnant" : "Postpartum";
+  const stageDetail = isPreg
+    ? w
+      ? `Week ${w.week} · Trimester ${w.trimester}`
+      : "Add a due date to see your week"
+    : babyAgeText(baby.birth_date, baby.pregnancy_due_date, false) || "Age not set";
+
+  return (
+    <section className="rounded-3xl bg-card p-5 ring-1 ring-zinc-950/5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="size-4 text-ink/60" />
+          <p className="text-sm font-medium">Your onboarding summary</p>
+        </div>
+        <Link to="/profile" className="text-xs text-ink/50 underline underline-offset-2">
+          Edit
+        </Link>
+      </div>
+      <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-2xl bg-cream p-3 ring-1 ring-zinc-950/10">
+          <dt className="text-[10px] uppercase tracking-[0.15em] text-ink/50">Stage</dt>
+          <dd className="mt-1 font-medium">{stageLabel}</dd>
+          <dd className="text-xs text-ink/60">{stageDetail}</dd>
+        </div>
+        <div className="rounded-2xl bg-cream p-3 ring-1 ring-zinc-950/10">
+          <dt className="text-[10px] uppercase tracking-[0.15em] text-ink/50">
+            {isPreg ? "Baby (nickname)" : "Baby"}
+          </dt>
+          <dd className="mt-1 font-medium">{baby.name}</dd>
+          <dd className="text-xs text-ink/60">
+            {isPreg
+              ? baby.pregnancy_due_date
+                ? `Due ${new Date(baby.pregnancy_due_date).toLocaleDateString()}`
+                : "Due date not set"
+              : baby.birth_date
+                ? `Born ${new Date(baby.birth_date).toLocaleDateString()}`
+                : "Birth date not set"}
+          </dd>
+        </div>
+      </dl>
+      {concerns.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-ink/50">Focus areas</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {concerns.map((c) => (
+              <span key={c} className="rounded-full bg-cream px-2.5 py-1 text-xs text-ink/80 ring-1 ring-zinc-950/10">
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="mt-3 text-[11px] text-ink/50">
+        Not right? Update it from your profile and the dashboard will follow.
+      </p>
+    </section>
+  );
+}
+

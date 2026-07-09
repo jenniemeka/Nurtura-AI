@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { completeOnboarding } from "@/lib/profile.functions";
 import { AuthShell, Input } from "@/components/auth-shell";
@@ -33,6 +34,7 @@ function monthsAgoToDate(months: number) {
 function Onboarding() {
   const nav = useNavigate();
   const onboard = useServerFn(completeOnboarding);
+  const queryClient = useQueryClient();
   const [ready, setReady] = useState(false);
 
   const [step, setStep] = useState(0);
@@ -115,7 +117,13 @@ function Onboarding() {
           },
         },
       });
-      nav({ to: "/dashboard" });
+      // Refresh the auth session so any newly-issued claims (e.g. onboarded)
+      // are on the bearer, then drop cached profile data so the dashboard
+      // reads the freshly-saved onboarding answers on mount.
+      await supabase.auth.refreshSession().catch(() => {});
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      queryClient.removeQueries({ queryKey: ["me"] });
+      nav({ to: "/dashboard", replace: true });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
       setSubmitting(false);
