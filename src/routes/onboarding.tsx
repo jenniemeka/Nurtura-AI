@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { completeOnboarding } from "@/lib/profile.functions";
 import { AuthShell, Input } from "@/components/auth-shell";
 
@@ -31,9 +31,9 @@ function monthsAgoToDate(months: number) {
 }
 
 function Onboarding() {
-  const { user, loading } = useAuth();
   const nav = useNavigate();
   const onboard = useServerFn(completeOnboarding);
+  const [ready, setReady] = useState(false);
 
   const [step, setStep] = useState(0);
   const [parentName, setParentName] = useState("");
@@ -46,9 +46,43 @@ function Onboarding() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Wait for session (auth may still be persisting right after signup),
+  // then send already-onboarded users straight to the dashboard.
   useEffect(() => {
-    if (!loading && !user) nav({ to: "/login" });
-  }, [loading, user, nav]);
+    let cancelled = false;
+    async function resolve(userId: string | null) {
+      if (cancelled) return;
+      if (!userId) {
+        nav({ to: "/login", replace: true });
+        return;
+      }
+      const { data } = await supabase.from("profiles").select("onboarded, parent_name").eq("id", userId).maybeSingle();
+      if (cancelled) return;
+      if (data?.onboarded) {
+        nav({ to: "/dashboard", replace: true });
+        return;
+      }
+      if (data?.parent_name) setParentName(data.parent_name);
+      setReady(true);
+    }
+
+    supabase.auth.getSession().then(({ data }) => resolve(data.session?.user.id ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) resolve(session.user.id);
+    });
+    // Give the session up to ~2s to appear before bouncing to /login.
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session && !cancelled) nav({ to: "/login", replace: true });
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
+  }, [nav]);
+
 
   const effectiveDate = useMemo(() => {
     if (date) return date;
@@ -88,8 +122,13 @@ function Onboarding() {
     }
   }
 
+  if (!ready) {
+    return <AuthShell title="Loading…" sub="One moment while we set things up."><div className="h-8" /></AuthShell>;
+  }
+
   return (
     <AuthShell title="Let's set things up" sub={`Step ${step + 1} of 3`}>
+
       {step === 0 && (
         <div className="space-y-3">
           <Input placeholder="Your name" value={parentName} onChange={(e) => setParentName(e.target.value)} maxLength={80} />

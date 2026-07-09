@@ -5,6 +5,7 @@ import { lovable } from "@/integrations/lovable";
 import { AuthShell, Input, Divider } from "@/components/auth-shell";
 import { explainAuthError, signupVerificationHint, type AuthHint } from "@/lib/auth-errors";
 import { AuthAlert } from "@/components/auth-alert";
+import { resolvePostAuthRoute } from "@/lib/post-auth";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Sign up — Nurtura" }, { name: "description", content: "Start your parenting journey with Nurtura." }] }),
@@ -33,15 +34,19 @@ function Signup() {
         data: { parent_name: name },
       },
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setHint(explainAuthError(error.message, "signup"));
       return;
     }
-    // If session is present, auto-confirm is on — proceed. Otherwise show verification hint.
-    if (data.session) {
-      nav({ to: "/onboarding" });
+    // Session present → auto-confirm on. Otherwise verification needed.
+    if (data.session && data.user) {
+      // Wait a beat so the session is fully persisted before RLS-guarded reads.
+      const to = await resolvePostAuthRoute(data.user.id);
+      setLoading(false);
+      nav({ to, replace: true });
     } else {
+      setLoading(false);
       setHint(signupVerificationHint(true));
     }
   }
@@ -55,7 +60,10 @@ function Signup() {
       setHint(explainAuthError(r.error.message, "signup"));
       return;
     }
-    if (!r?.redirected) nav({ to: "/onboarding" });
+    if (!r?.redirected) {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) nav({ to: await resolvePostAuthRoute(data.user.id), replace: true });
+    }
   }
 
   return (
