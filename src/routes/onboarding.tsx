@@ -34,6 +34,7 @@ function monthsAgoToDate(months: number) {
 function Onboarding() {
   const nav = useNavigate();
   const onboard = useServerFn(completeOnboarding);
+  const queryClient = useQueryClient();
   const [ready, setReady] = useState(false);
 
   const [step, setStep] = useState(0);
