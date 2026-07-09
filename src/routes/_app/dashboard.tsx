@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   Sparkles, Moon, Apple, Syringe, ArrowRight, Baby, Stethoscope, ListChecks,
-  Footprints, Timer, Heart, BookOpen, CalendarPlus,
+  Footprints, Timer, Heart, BookOpen, CalendarPlus, CheckCircle2,
 } from "lucide-react";
 import { getMe } from "@/lib/profile.functions";
 
